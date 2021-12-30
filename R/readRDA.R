@@ -39,9 +39,15 @@ function(con, skipValue = FALSE, hdr = NULL)
 readList =
 function(con, info, skipValue = FALSE, hdr = NULL)    
 {
-    browser()
     len = readInteger(con)
-    replicate(len, ReadItem(con, skipValue = skipValue, hdr = hdr), simplify = FALSE)
+    ans = replicate(len, ReadItem(con, skipValue = skipValue, hdr = hdr), simplify = FALSE)
+    if(info["hasattr"] > 0) {
+        at = readAttributes(con, skipValue = FALSE, hdr = FALSE)
+        attributes(ans) = at
+    }
+    
+#    browser()
+    ans
 }
 
 readVector =
