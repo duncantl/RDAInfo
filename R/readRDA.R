@@ -65,7 +65,6 @@ function(con, info, skipValue = FALSE, hdr = NULL)
 
     if(info['hasattr'] > 0) {
         at = readAttributes(con, skipValue = FALSE, hdr = hdr)
-        browser()
         if(skipValue) {
             browser()
         } else
@@ -78,10 +77,7 @@ function(con, info, skipValue = FALSE, hdr = NULL)
 readCharacterVector =
 function(con, len, skipValue = FALSE, hdr = NULL)    
 {
-    ans = replicate(len, { readInteger(con); readCharsxp(con, skipValue = skipValue, hdr = hdr)})
-    #XXX
-    print(ans)
-    ans
+    replicate(len, { readInteger(con); readCharsxp(con, skipValue = skipValue, hdr = hdr)})
 }
 
 readType =
@@ -101,7 +97,7 @@ function(con, info, skipValue = FALSE, hdr = NULL)
             break
     }
     
- browser()    
+
     if(info["hasattr"] > 0) {
         at = readAttributes(con, skipValue, hdr)
         if(skipValue)
@@ -177,7 +173,6 @@ function(con)
 readInteger =
 function(con, nel = 1L)
 {
-#    browser()
     buf = readBin(con, "raw", nel * 4L)
     .Call("xdr_integer", buf)
 }
