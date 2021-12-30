@@ -3,7 +3,6 @@ library(bitops)
 toc =
 function(file)
 {
-
     #Most of this is so similar to load
     if(is.character(file)) {
         con = gzfile(file, "rb")
@@ -13,8 +12,138 @@ function(file)
     else
         stop("invalid value of file")
 
-    readHeader(con)
+    header = readHeader(con)
+    ReadItem(con, hdr = header)
 }
+
+ReadItem =
+    # hdr is the header from readHeader() to provide context. 
+function(con, skipValue = FALSE, hdr = NULL)    
+{
+    ty = readInteger(con)
+    elInfo = unpackFlags(ty)
+
+    switch(sexpType(elInfo["type"]),
+           LISTSXP = readPairList(con, elInfo, skipValue, hdr),
+           LGLSXP =,
+           INTSXP =,
+           REALSXP = readVector(con, elInfo, skipValue, hdr),
+           STRSXP = readVector(con, elInfo, skipValue, hdr)
+          )
+}
+
+readVector =
+function(con, info, skipValue = FALSE, hdr = NULL)    
+{
+    len = readInteger(con)
+    ty = sexpType(info["type"])
+    if(ty == "STRSXP") {
+        #XXXX need to handle attributes on the character vector.
+        return(readCharacterVector(con, len, hdr = hdr))
+    }
+    
+    itemSize = switch(ty,
+                      LGLSXP = 4L,
+                      INTSXP = 4L,
+                      REALSXP = 8L,
+                      RAWSXP = 1L)
+    
+    ans = if(skipValue) {
+              if(ty == "STRSXP") 
+                  readCharacterVector(con, len, skipValue, hdr = hdr)
+              else 
+                  seek(con, len * itemSize, origin = "current")
+
+          } else {
+              buf = readBin(con, 'raw', len * itemSize)
+              switch(ty,
+                     LGLSXP = as.logical(.Call("xdr_integer", buf)),
+                     INTSXP = .Call("xdr_integer", buf),
+                     REALSXP = .Call("xdr_numeric", buf),
+                     RAWSXP = buf)
+          }
+
+    if(info['hasattr'] > 0) {
+        at = readAttributes(con, skipValue = FALSE, hdr = hdr)
+        browser()
+        if(skipValue) {
+            browser()
+        } else
+            attributes(ans) = at
+    }
+    
+    ans
+}
+
+readCharacterVector =
+function(con, len, skipValue = FALSE, hdr = NULL)    
+{
+  browser()
+  replicate(len, { readInteger(con); readCharsxp(con, skipValue = skipValue, hdr = hdr)})
+}
+
+readPairList =
+function(con, info, skipValue = FALSE, hdr = NULL)    
+{
+    ans = list()
+    while(TRUE) {
+        flags = readInteger(con)
+        info = unpackFlags(flags)
+        if(info["type"] == NILVALUE_SXP)
+            break
+        
+        name = readTag(con, info)
+        value = ReadItem(con, skipValue, hdr)
+        ans[[name]] = value
+    }
+    
+ browser()    
+    if(info["hasattr"] > 0) {
+        at = readAttributes(con, skipValue, hdr)
+        if(skipValue)
+            browser()
+        else
+            attributes(value) = at
+    }
+    ans
+}
+
+
+readAttributes =
+function(con, skipValue = FALSE, hdr = NULL)    
+{
+    ty = readInteger(con)  # should be a LISTSXP
+    at = readPairList(con, unpackFlags(ty), hdr = hdr)
+}
+
+
+readTag =
+function(con, info = NULL)
+{
+    if(is.null(info)) {
+        flags = readInteger(con)
+        info = unpackFlags(flags)
+    }
+
+    flags = readInteger(con)
+    # type for this had better be 9
+    readCharsxp(con)
+}
+
+readCharsxp =
+function(con, skipValue = FALSE, hdr = NULL)
+{
+    nc = readInteger(con)
+    if(skipValue) {
+        seek(con, nc, "current")
+    } else {
+        chars = readBin(con, 'raw', nc)
+        rawToChar(chars)
+        # Use the encoding in hdr.
+    }
+}
+
+
 
 readHeader =
 function(con)    
@@ -22,23 +151,23 @@ function(con)
     start = readChar(con, 5L, useBytes = TRUE)
     # gives "RDX3\n"
 
+    format = readBin(con, 'raw', 2L) 
+    format = trimws(rawToChar(format))
+    if(format != "X")
+        stop("not XDR format")
 
-    #  = readBin(con, "raw", 1L)
-    format = readBin(con, 'raw', 2L) # "character", 1L)
-    format = rawToChar(format)
-    # Using XDR format. See InInteger.
 
+    info = list(format = format)
+    
     versions = replicate(3, readInteger(con))
-    # How to convert the writer_version, min_reader_version to 4.2.0 and 3.5.0
+    info$version = versions[1]
+    info[c("writer_version", "min_reader_version")] = lapply(versions[2:3], decodeVersion)
 
-    browser()
+    # Get the encoding
     nc = readInteger(con)
-    enc = rawToChar(readBin(con, 'raw', nc))
-    list(format = trimws(format), versions = versions, encoding = enc)
+    info$native_encoding = rawToChar(readBin(con, 'raw', nc))
     
-#    nchar = readBin(con, "integer", 1L)
-#    encoding = readChar(con, "integer", nchar)    
-    
+    info
 }
 
 readInteger =
