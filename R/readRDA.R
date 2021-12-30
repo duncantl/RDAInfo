@@ -78,23 +78,27 @@ function(con, info, skipValue = FALSE, hdr = NULL)
 readCharacterVector =
 function(con, len, skipValue = FALSE, hdr = NULL)    
 {
-  browser()
-  replicate(len, { readInteger(con); readCharsxp(con, skipValue = skipValue, hdr = hdr)})
+    ans = replicate(len, { readInteger(con); readCharsxp(con, skipValue = skipValue, hdr = hdr)})
+    #XXX
+    print(ans)
+    ans
 }
+
+readType =
+function(con)    
+    unpackFlags(readInteger(con))
 
 readPairList =
 function(con, info, skipValue = FALSE, hdr = NULL)    
 {
     ans = list()
     while(TRUE) {
-        flags = readInteger(con)
-        info = unpackFlags(flags)
-        if(info["type"] == NILVALUE_SXP)
-            break
-        
-        name = readTag(con, info)
+        name = readTag(con) # , info)
         value = ReadItem(con, skipValue, hdr)
         ans[[name]] = value
+        ty = readType(con)
+        if(ty["type"] == NILVALUE_SXP)
+            break
     }
     
  browser()    
