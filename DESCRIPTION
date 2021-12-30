@@ -1,0 +1,9 @@
+Package: RDAXDR
+Version: 0-1.0
+Title: Read summary of RDA files in XDR format
+Description: This explores reading RDA files in R code
+  and getting the names and types of the variables it contains
+  without reading/deserializing the actual values.
+Author: DTL
+Maintainer: <duncan@r-project.org>
+License: BSD
