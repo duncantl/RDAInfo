@@ -23,13 +23,25 @@ function(con, skipValue = FALSE, hdr = NULL)
     ty = readInteger(con)
     elInfo = unpackFlags(ty)
 
-    switch(sexpType(elInfo["type"]),
+    sexpType = sexpType(elInfo["type"])
+    switch(sexpType,
            LISTSXP = readPairList(con, elInfo, skipValue, hdr),
            LGLSXP =,
            INTSXP =,
            REALSXP = readVector(con, elInfo, skipValue, hdr),
-           STRSXP = readVector(con, elInfo, skipValue, hdr)
+           STRSXP = readVector(con, elInfo, skipValue, hdr),
+           VECSXP = readList(con, elInfo, skipValue, hdr),
+           NILVALUE_SXP = NULL,
+           stop("unhandled type in ReadItem ", sexpType)
           )
+}
+
+readList =
+function(con, info, skipValue = FALSE, hdr = NULL)    
+{
+    browser()
+    len = readInteger(con)
+    replicate(len, ReadItem(con, skipValue = skipValue, hdr = hdr), simplify = FALSE)
 }
 
 readVector =
