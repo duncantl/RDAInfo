@@ -73,10 +73,29 @@ On a Macbook Pro (32Gb RAM)
 ## Character vector rather than factor
 
 If we change the factor to a character vector, the results are not even close.
-The current R code reads each string in a character vector with three R calls.
-It has to read the integer identifying the CHARSXP, then the number of characters, and then
-seeking/reading that number of characters.
+The original R code in this package read each string in a character vector with three R calls;
++ consume the CHARSXP integer
++ read the number of characters/bytes
++ skip that number of bytes
+So we read the entire character vector with
+```r
+nc = replicate(len, { readInteger(con); nchar = readInteger(con); seek(con, nchar, "current"); nchar})
+```
+The R interpreter overhead is enormous. We could change the first call to readInteger() to `seek(,
+4L)` as we discard the value.  However, this won't change the overall timing sufficiently to make
+this approach competitive.
 
+However, switching to a C routine that does the same thing (in `src/eatCharacterVectorEelements.c`)
+does.
+
+On a Macbook Pro (32Gb RAM) 
++ load: 3.6 seconds
++ Table of Contents: 1.8 seconds 
++ Speedup factor:  2.0
+(Medians over 5 runs, elapsed time)
+
+This doesn't take into account that the `load()` version has used a significant amount of memory
+and will have to be garbage collected. (Nor has it summarized the variable types.)
 
 These two variations show the efficiency of factors in representing a large character vector with a small
 number of unique values.
