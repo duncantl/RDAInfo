@@ -28,13 +28,63 @@ function(con, skipValue = FALSE, hdr = NULL)
            LISTSXP = readPairList(con, elInfo, skipValue, hdr),
            LGLSXP =,
            INTSXP =,
-           REALSXP = readVector(con, elInfo, skipValue, hdr),
-           STRSXP = readVector(con, elInfo, skipValue, hdr),
+           REALSXP =, 
+           CPLXSXP =,
+           STRSXP = readVector(con, elInfo, skipValue, hdr), 
            VECSXP = readList(con, elInfo, skipValue, hdr),
+           NILSXP = ,
            NILVALUE_SXP = NULL,
+           GLOBALENV_SXP = globalenv(),
+           EMPTYENV_SXP = emptyenv(),
+           BASEENV_SXP = getNamespace("base"),
+           CLOSXP = readFunction(con, elInfo, skipValue, hdr),
+           # both MISSINGARG_SXP and UNBOUNDVALUE_SXP correspond to
+           # C level SYMSXPs that are not necessarily/obviously available to use at the R level.?????
+           MISSINGARG_SXP = "bob", # XXXX   quote(foo(,))[[2]],  need to mimic R_MissingArg
+           # UNBOUNDVALUE_SXP  
+           LANGSXP = readLangSEXP(con, elInfo, skipValue, hdr),
+           SYMSXP = readTag(con, elInfo), #???
+           # REFSXP
+           # NAMESPACE_SXP
+           # PACKAGESXP
            stop("unhandled type in ReadItem ", sexpType)
           )
 }
+
+readLangSEXP =
+function(con, info, skipValue = FALSE, hdr = NULL)    
+{
+    #   readFunction(con, info, skipValue, hdr)
+    k = ReadItem(con, skipValue = FALSE, hdr)
+    browser()
+}
+
+
+readFunction =
+    #  See serialize.c::1135
+function(con, info, skipValue = FALSE, hdr = NULL)    
+{
+    # info says there is a tag . serialize for the output explicitly sets this.
+    at = NULL
+    if(info['hasattr'])
+        at = readAttributes(con, skipValue = FALSE, hdr = hdr)
+
+#    tag = readTag(con)
+      # env
+    env = ReadItem(con, skipValue = FALSE, hdr = hdr)
+    formals = ReadItem(con, skipValue = FALSE, hdr = hdr)
+    body = ReadItem(con, skipValue, hdr = hdr)
+
+    browser()
+    ans = NULL
+    if(!is.null(at)) {
+
+    }
+    
+
+    ans
+}
+
 
 readList =
 function(con, info, skipValue = FALSE, hdr = NULL)    
@@ -43,10 +93,10 @@ function(con, info, skipValue = FALSE, hdr = NULL)
     ans = replicate(len, ReadItem(con, skipValue = skipValue, hdr = hdr), simplify = FALSE)
     if(info["hasattr"] > 0) {
         at = readAttributes(con, skipValue = FALSE, hdr = FALSE)
+        #XXXX what to do with them if skipValue = true.
         attributes(ans) = at
     }
-    
-#    browser()
+
     ans
 }
 
@@ -64,8 +114,9 @@ function(con, info, skipValue = FALSE, hdr = NULL)
                       LGLSXP = 4L,
                       INTSXP = 4L,
                       REALSXP = 8L,
-                      RAWSXP = 1L)
-    
+                      RAWSXP = 1L,
+                      CPLXSXP = 16L)
+    browser()    
     ans = if(skipValue) {
               if(ty == "STRSXP") 
                   readCharacterVector(con, len, skipValue, hdr = hdr)
@@ -74,11 +125,16 @@ function(con, info, skipValue = FALSE, hdr = NULL)
 
           } else {
               buf = readBin(con, 'raw', len * itemSize)
-              switch(ty,
-                     LGLSXP = as.logical(.Call("xdr_integer", buf)),
-                     INTSXP = .Call("xdr_integer", buf),
-                     REALSXP = .Call("xdr_numeric", buf),
-                     RAWSXP = buf)
+              if(ty == "CPLXSXP") {
+                  tmp = .Call("xdr_numeric", buf, len*2L)
+                  i = seq(1, length = len, by = 2)
+                  complex(real = tmp[i], imaginary = tmp[i+1L])
+              } else
+                  switch(ty,
+                         LGLSXP = as.logical(.Call("xdr_integer", buf)),
+                         INTSXP = .Call("xdr_integer", buf),
+                         REALSXP = .Call("xdr_numeric", buf, len),
+                         RAWSXP = buf)
           }
 
     if(info['hasattr'] > 0) {
@@ -107,11 +163,11 @@ function(con, info, skipValue = FALSE, hdr = NULL)
 {
     ans = list()
     while(TRUE) {
-        name = readTag(con) # , info)
+        name = readTag(con) 
         value = ReadItem(con, skipValue, hdr)
         ans[[name]] = value
         ty = readType(con)
-        if(ty["type"] == NILVALUE_SXP)
+        if(ty["type"] == NILVALUE_SXP || ty["type"] == NILSXP)
             break
     }
     
@@ -121,7 +177,7 @@ function(con, info, skipValue = FALSE, hdr = NULL)
         if(skipValue)
             browser()
         else
-            attributes(value) = at
+            attributes(ans) = at
     }
     ans
 }
@@ -144,6 +200,8 @@ function(con, info = NULL)
     }
 
     flags = readInteger(con)
+ty = unpackFlags(flags)
+if(ty["type"] != 9) browser()    
     # type for this had better be 9
     readCharsxp(con)
 }
