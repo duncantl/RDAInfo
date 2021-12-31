@@ -1,13 +1,9 @@
 #include <Rinternals.h>
 
 
-// All of this is basically from serialize.c
+// Basic idea borrowed from serialize.c
 #include <rpc/types.h>
 #include <rpc/xdr.h>
-
-#define CHUNK_SIZE 8096
-
-#define min2(a, b) ((a) < (b)) ? (a) : (b)
 
 
 SEXP
@@ -33,7 +29,7 @@ xdr_integer(SEXP r_buf)
 
 
 SEXP
-xdr_numeric(SEXP r_buf, SEXP r_numVals)
+xdr_numeric(SEXP r_buf, SEXP r_numVals) // don't need r_numVals even for complex?
 {
 //    R_xlen_t len = Rf_length(r_buf);// XXX fix to Xlength.
     R_xlen_t numValues = INTEGER(r_numVals)[0];  // len/8;
@@ -53,19 +49,4 @@ xdr_numeric(SEXP r_buf, SEXP r_numVals)
     return(ans);
 }
 
-
-
-
-
     
-/*    
-    for (done = 0; done < len; done += this) {
-	this = min2(CHUNK_SIZE, len - done);
-//	stream->InBytes(stream, buf, (int)(sizeof(int) * this));
-	xdrmem_create(&xdrs, buf, (int)(this * sizeof(int)), XDR_DECODE);
-	for(int cnt = 0; cnt < this; cnt++)
-	    if(!xdr_int(&xdrs, INTEGER(obj) + done + cnt))
-		error(_("XDR read failed"));
-	xdr_destroy(&xdrs);
-    }
-*/
