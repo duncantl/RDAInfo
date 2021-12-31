@@ -1,7 +1,60 @@
 ## Table of Contents of an R .rda File
 
-The idea is to be able to read an R data file created via a call to save() without loading 
-the R objects but providing a description of the top-level variables it contains.
+The purposse of this package are to be able to deal with large R data (rda) files
+created via a call to save() **without loading**
+the R objects but 
++ providing a description of the top-level variables it contains without restoring the objects,
++ allowing deserializing one or a subset of the variables without restoring the others
+
+The following is an example of its use:
+```r
+rda.file = system.file("sampleRDA/class_named_integer_logical_character_uncompress.rda", package = "RDAXDR")
+tc = toc(rda.file)
+```
+```
+file: path/to/class_named_integer_logical_character_uncompress.rda
+encoding: UTF-8
+
+      type length   class offset
+i   INTSXP      4 Example     32
+l   LGLSXP      5    <NA>    195
+let STRSXP      7    <NA>    240
+```
+
+We can extract an individual variable with, e.g.,
+```r
+tc[[ "let" ]]
+tc$let
+```
+```
+[1] "a" "b" "c" "d" "e" "f" "g"
+```
+
+And similarly,  `tc[ c("l", "let") ]` or `tc[ c(2, 3) ]`
+
+
+
+
+## Marginally improved load()
+
+load with an option to only assign a subset would be a minor help in not overwriting existing variables
+```r
+Load('filename.rda', vars = c('a', 'b'))
+```
+This would restore all the variables in the Rda file into a new environment and then 
+assign those in vars to the target `envir`.
+This just avoids the caller having to create the new environment and then assigning this subset of
+variables. It does allow us to map the variable names to something different, e.g.,
+```r
+Load('filename.rda', vars = c(x = 'a', y = 'b'))
+```
+would create variables x and y, copying a and b to those variable names in the target environment.
+
+And of course, if vars is empty, this would be the same as calling `load()`.
+
+
+
+## Background, Context & Motivation
 
 
 This is the start of an R-code implementation of reading an XDR-formatted RDA (rdata) archive.
