@@ -13,12 +13,12 @@ function(file)
         stop("invalid value of file")
 
     header = readHeader(con)
-    ReadItem(con, hdr = header)
+    ReadItem(con, TRUE, hdr = header, depth = 0L)
 }
 
 ReadItem =
     # hdr is the header from readHeader() to provide context. 
-function(con, skipValue = FALSE, hdr = NULL)    
+function(con, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     ty = readInteger(con)
     elInfo = unpackFlags(ty)
@@ -51,8 +51,48 @@ function(con, skipValue = FALSE, hdr = NULL)
           )
 }
 
+
+
+readPairList =
+function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
+{
+    ans = list()
+    while(TRUE) {
+        name = readTag(con) 
+        value = ReadItem(con, skipValue, hdr, depth = depth + 1L)
+        ans[[name]] = value
+        ty = readType(con)
+        if(ty["type"] == NILVALUE_SXP || ty["type"] == NILSXP)
+            break
+    }
+
+    if(depth == 0) {
+#        browser()
+    }
+    
+    if(info["hasattr"] > 0) {
+        at = readAttributes(con, skipValue, hdr, depth = depth + 1L)
+        if(skipValue)
+            browser()
+        else
+            attributes(ans) = at
+    }
+    ans
+}
+
+
+readAttributes =
+function(con, skipValue = FALSE, hdr = NULL, depth = 0L)    
+{
+    ty = readInteger(con)  # should be a LISTSXP
+    at = readPairList(con, unpackFlags(ty), hdr = hdr, depth = depth)
+}
+
+
+#############
+
 readLangSEXP =
-function(con, info, skipValue = FALSE, hdr = NULL)    
+function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     #   readFunction(con, info, skipValue, hdr)
     k = ReadItem(con, skipValue = FALSE, hdr)
@@ -62,7 +102,7 @@ function(con, info, skipValue = FALSE, hdr = NULL)
 
 readFunction =
     #  See serialize.c::1135
-function(con, info, skipValue = FALSE, hdr = NULL)    
+function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     # info says there is a tag . serialize for the output explicitly sets this.
     at = NULL
@@ -80,19 +120,21 @@ function(con, info, skipValue = FALSE, hdr = NULL)
     if(!is.null(at)) {
 
     }
-    
 
     ans
 }
 
 
+
+#############
+
 readList =
-function(con, info, skipValue = FALSE, hdr = NULL)    
+function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     len = readInteger(con)
-    ans = replicate(len, ReadItem(con, skipValue = skipValue, hdr = hdr), simplify = FALSE)
+    ans = replicate(len, ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L), simplify = FALSE)
     if(info["hasattr"] > 0) {
-        at = readAttributes(con, skipValue = FALSE, hdr = FALSE)
+        at = readAttributes(con, skipValue = FALSE, hdr = FALSE, depth = depth + 1L)
         #XXXX what to do with them if skipValue = true.
         attributes(ans) = at
     }
@@ -101,13 +143,14 @@ function(con, info, skipValue = FALSE, hdr = NULL)
 }
 
 readVector =
-function(con, info, skipValue = FALSE, hdr = NULL)    
+function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     len = readInteger(con)
     ty = sexpType(info["type"])
+#    browser()
     if(ty == "STRSXP") {
         #XXXX need to handle attributes on the character vector.
-        return(readCharacterVector(con, len, hdr = hdr))
+        return(readCharacterVector(con, len, skipValue = skipValue, hdr = hdr, depth = depth + 1L))
     }
     
     itemSize = switch(ty,
@@ -116,13 +159,14 @@ function(con, info, skipValue = FALSE, hdr = NULL)
                       REALSXP = 8L,
                       RAWSXP = 1L,
                       CPLXSXP = 16L)
-    browser()    
+
     ans = if(skipValue) {
               if(ty == "STRSXP") 
-                  readCharacterVector(con, len, skipValue, hdr = hdr)
+                  readCharacterVector(con, len, skipValue, hdr = hdr, depth = depth + 1L)
               else 
                   seek(con, len * itemSize, origin = "current")
 
+              data.frame(type = ty, length = len, class = NA, names = FALSE)
           } else {
               buf = readBin(con, 'raw', len * itemSize)
               if(ty == "CPLXSXP") {
@@ -138,9 +182,14 @@ function(con, info, skipValue = FALSE, hdr = NULL)
           }
 
     if(info['hasattr'] > 0) {
-        at = readAttributes(con, skipValue = FALSE, hdr = hdr)
+        at = readAttributes(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
         if(skipValue) {
-            browser()
+            if("names" %in% names(at) && length(at$names))
+                ans$name = TRUE
+            if("class" %in% names(at) && length(at$class))
+                ans$class = at$class
+            if(!all(w <- (names(at) %in% c("names", "class"))))
+                warning("ignoring attribute names on vector: ", paste(names(at)[!w], collapse = ", "))
         } else
             attributes(ans) = at
     }
@@ -149,47 +198,36 @@ function(con, info, skipValue = FALSE, hdr = NULL)
 }
 
 readCharacterVector =
-function(con, len, skipValue = FALSE, hdr = NULL)    
+function(con, len, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
-    replicate(len, { readInteger(con); readCharsxp(con, skipValue = skipValue, hdr = hdr)})
+    # Need to know if to process attributes or leave this to readVector???
+    if(skipValue) {
+        nc = replicate(len, { readInteger(con); nchar = readInteger(con); seek(con, nchar, "current"); nchar})
+        ans = data.frame(type = "STRSXP", length = len, class = NA, names = FALSE, totalNumCharacters = sum(nc))
+    } else 
+        replicate(len, { readInteger(con); readCharsxp(con, skipValue = skipValue, hdr = hdr)})
 }
+
+
+readCharsxp =
+function(con, skipValue = FALSE, hdr = NULL)
+{
+    nc = readInteger(con)
+    if(skipValue) {
+        seek(con, nc, "current")
+    } else {
+        chars = readBin(con, 'raw', nc)
+        rawToChar(chars)
+        # Use the encoding in hdr.
+    }
+}
+
+
+#################
 
 readType =
 function(con)    
     unpackFlags(readInteger(con))
-
-readPairList =
-function(con, info, skipValue = FALSE, hdr = NULL)    
-{
-    ans = list()
-    while(TRUE) {
-        name = readTag(con) 
-        value = ReadItem(con, skipValue, hdr)
-        ans[[name]] = value
-        ty = readType(con)
-        if(ty["type"] == NILVALUE_SXP || ty["type"] == NILSXP)
-            break
-    }
-    
-
-    if(info["hasattr"] > 0) {
-        at = readAttributes(con, skipValue, hdr)
-        if(skipValue)
-            browser()
-        else
-            attributes(ans) = at
-    }
-    ans
-}
-
-
-readAttributes =
-function(con, skipValue = FALSE, hdr = NULL)    
-{
-    ty = readInteger(con)  # should be a LISTSXP
-    at = readPairList(con, unpackFlags(ty), hdr = hdr)
-}
-
 
 readTag =
 function(con, info = NULL)
@@ -206,18 +244,33 @@ if(ty["type"] != 9) browser()
     readCharsxp(con)
 }
 
-readCharsxp =
-function(con, skipValue = FALSE, hdr = NULL)
+
+
+# 
+readInteger =
+function(con, nel = 1L)
 {
-    nc = readInteger(con)
-    if(skipValue) {
-        seek(con, nc, "current")
-    } else {
-        chars = readBin(con, 'raw', nc)
-        rawToChar(chars)
-        # Use the encoding in hdr.
-    }
+    buf = readBin(con, "raw", nel * 4L)
+    .Call("xdr_integer", buf)
 }
+
+IS_OBJECT_BIT_MASK =   bitShiftL(1, 8)
+HAS_ATTR_BIT_MASK =    bitShiftL(1, 9)
+HAS_TAG_BIT_MASK =     bitShiftL(1, 10)
+
+
+unpackFlags =
+    #
+    #  we don't conver the isobj, hasattr, hastag to LOGICALs
+    #  so that we can combine all in a vector.
+    #  These may be > 1  All we care is if 0 or not 0.
+function(val)    
+    c(type = bitAnd(val, 255L),
+      levels = bitShiftR(val,  12L),
+      isobj = bitAnd(val, IS_OBJECT_BIT_MASK),
+      hasattr = bitAnd(val, HAS_ATTR_BIT_MASK),
+      hastag = bitAnd(val, HAS_TAG_BIT_MASK))
+
 
 
 
@@ -245,31 +298,6 @@ function(con)
     
     info
 }
-
-readInteger =
-function(con, nel = 1L)
-{
-    buf = readBin(con, "raw", nel * 4L)
-    .Call("xdr_integer", buf)
-}
-
-IS_OBJECT_BIT_MASK =   bitShiftL(1, 8)
-HAS_ATTR_BIT_MASK =    bitShiftL(1, 9)
-HAS_TAG_BIT_MASK =     bitShiftL(1, 10)
-
-unpackFlags =
-    #
-    #  we don't conver the isobj, hasattr, hastag to LOGICALs
-    #  so that we can combine all in a vector.
-    #  These may be > 1  All we care is if 0 or not 0.
-function(val)    
-    c(type = bitAnd(val, 255L),
-      levels = bitShiftR(val,  12L),
-      isobj = bitAnd(val, IS_OBJECT_BIT_MASK),
-      hasattr = bitAnd(val, HAS_ATTR_BIT_MASK),
-      hastag = bitAnd(val, HAS_TAG_BIT_MASK))
-
-
 
 decodeVersion =
     #
