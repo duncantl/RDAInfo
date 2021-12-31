@@ -14,7 +14,8 @@ function(file)
 
     header = readHeader(con)
     ans = ReadItem(con, TRUE, hdr = header, depth = 0L)
-    ans$.meta = list(file = file, header = header)
+    attr(ans, "file") = file
+    attr(ans, "header") = header
     ans
 }
 
