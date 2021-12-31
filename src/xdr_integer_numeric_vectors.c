@@ -33,10 +33,10 @@ xdr_integer(SEXP r_buf)
 
 
 SEXP
-xdr_numeric(SEXP r_buf)
+xdr_numeric(SEXP r_buf, SEXP r_numVals)
 {
-    R_xlen_t len = Rf_length(r_buf);// XXX fix to Xlength.
-    R_xlen_t numValues = len/8;
+//    R_xlen_t len = Rf_length(r_buf);// XXX fix to Xlength.
+    R_xlen_t numValues = INTEGER(r_numVals)[0];  // len/8;
     void *buf;
     XDR xdrs;
     SEXP ans;
