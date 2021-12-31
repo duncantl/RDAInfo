@@ -1,3 +1,9 @@
+## Table of Contents of an R .rda File
+
+The idea is to be able to read an R data file created via a call to save() without loading 
+the R objects but providing a description of the top-level variables it contains.
+
+
 This is the start of an R-code implementation of reading an XDR-formatted RDA (rdata) archive.
 Since this is already implemented fully and efficiently in C (serialize.c), this version will not be
 competitive.
@@ -32,9 +38,12 @@ There are however several motivations:
 In other words, this is an R prototype of something we might consider implementing in C, and
 specifically, adapting the code in serialize.c (and saveload.c) in the R source.
 It is not intended to be a production-level solution that will work best in all cases. 
-We may well implement the most significant bottleneck in C, that is reading large character vectors.
+√ We did ~~may well~~ implement the most significant bottleneck in C, that is reading large
+character vectors. This nows makes the R implementation faster than load()'ing all the objects, at
+least for cases of a collection of large vectors.
 
-This grew out of something I am writing as a case study in "Hacking the R engine" with the hope of
+While I originally thought this table-of-contents functionality would be useful about 20 years ago, 
+the current motivation grew from something I am writing as a case study in "Hacking the R engine" with the hope of
 helping people learn to experiment with and contribute to the R source code.
 
 
@@ -57,13 +66,16 @@ While we wrote this only today and haven't tested it much, this currently
 
 
 ## For an RDA file with 4 variables, each of length 1e7 (but separate variables)
+
+Contents of the RDA file are 4 vectors, each of length 1e7
   + numeric
   + numeric
   + numeric
   + factor
-268M
+268M uncompressed
 
 On a Macbook Pro (32Gb RAM) 
+
 + load: .775 seconds
 + Table of Contents: .007 seconds 
 + Factor:  110.7
@@ -89,6 +101,7 @@ However, switching to a C routine that does the same thing (in `src/eatCharacter
 does.
 
 On a Macbook Pro (32Gb RAM) 
+
 + load: 3.6 seconds
 + Table of Contents: 1.8 seconds 
 + Speedup factor:  2.0
@@ -96,6 +109,7 @@ On a Macbook Pro (32Gb RAM)
 
 This doesn't take into account that the `load()` version has used a significant amount of memory
 and will have to be garbage collected. (Nor has it summarized the variable types.)
+
 
 These two variations show the efficiency of factors in representing a large character vector with a small
 number of unique values.
