@@ -201,11 +201,18 @@ readCharacterVector =
 function(con, len, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     # Need to know if to process attributes or leave this to readVector???
-    if(skipValue) {
-        nc = replicate(len, { readInteger(con); nchar = readInteger(con); seek(con, nchar, "current"); nchar})
-        ans = data.frame(type = "STRSXP", length = len, class = NA, names = FALSE, totalNumCharacters = sum(nc))
-    } else 
+    if(skipValue) 
+        skipCharacterVector(con, len)
+    else 
         replicate(len, { readInteger(con); readCharsxp(con, skipValue = skipValue, hdr = hdr)})
+}
+
+skipCharacterVector =
+function(con, len)
+{
+    #nc = replicate(len, { readInteger(con); nchar = readInteger(con); seek(con, nchar, "current"); nchar})
+    nc = .Call("R_eatCharVectorElements", con, len)
+    ans = data.frame(type = "STRSXP", length = len, class = NA, names = FALSE, totalNumCharacters = sum(nc))
 }
 
 
