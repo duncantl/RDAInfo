@@ -78,6 +78,10 @@ function(x, i, j, ...)
         if(!all(w <- (i %in% names(x))))
             stop( paste(i[!w], collapse = ", "), " not in rda file")
     }
-    
-    structure(lapply(i, function(id) x[[id]]), names = i)    
+
+
+    if(any(duplicated(i))) 
+       structure(lapply(unique(i), function(id) x[[id]]), names = unique(i))[i]
+    else
+       structure(lapply(i, function(id) x[[id]]), names = i)    
 }
