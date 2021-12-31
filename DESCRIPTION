@@ -7,3 +7,5 @@ Description: This explores reading RDA files in R code
 Author: DTL
 Maintainer: <duncan@r-project.org>
 License: BSD
+Imports: bitops
+
