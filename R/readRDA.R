@@ -13,7 +13,9 @@ function(file)
         stop("invalid value of file")
 
     header = readHeader(con)
-    ReadItem(con, TRUE, hdr = header, depth = 0L)
+    ans = ReadItem(con, TRUE, hdr = header, depth = 0L)
+    ans$.meta = list(file = file, header = header)
+    ans
 }
 
 ReadItem =
@@ -57,8 +59,11 @@ readPairList =
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     ans = list()
+    positions = numeric()
     while(TRUE) {
-        name = readTag(con) 
+        pos = seek(con)
+        name = readTag(con)
+        positions[name] = pos
         value = ReadItem(con, skipValue, hdr, depth = depth + 1L)
         ans[[name]] = value
         ty = readType(con)
@@ -68,6 +73,8 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 
     if(depth == 0) {
 #        browser()
+        ans = mapply(function(d, p) { d$offset = p; d}, ans, positions, SIMPLIFY = FALSE)
+        class(ans) = "RDAToc"
     }
     
     if(info["hasattr"] > 0) {
