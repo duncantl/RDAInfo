@@ -1,3 +1,9 @@
 import(bitops)
 
 export(toc)
+S3method("[[", "RDAToc")
+S3method("[", "RDAToc")
+S3method("print", "RDAToc")
+S3method("as.data.frame", "RDAToc")
+
+export(Load)
