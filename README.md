@@ -76,3 +76,8 @@ If we change the factor to a character vector, the results are not even close.
 The current R code reads each string in a character vector with three R calls.
 It has to read the integer identifying the CHARSXP, then the number of characters, and then
 seeking/reading that number of characters.
+
+
+These two variations show the efficiency of factors in representing a large character vector with a small
+number of unique values.
+
