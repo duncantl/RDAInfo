@@ -1,4 +1,5 @@
-SXPMap = c(NILSXP = 	     0	  ,
+SEXPMap = c(
+ NILSXP = 	     0	  ,
  SYMSXP = 	     1	  ,
  LISTSXP = 	     2	  ,
  CLOSXP = 	     3	  ,
@@ -42,9 +43,13 @@ SXPMap = c(NILSXP = 	     0	  ,
  BCREPDEF  =       244,
  BCREPREF  =       243,
  EMPTYENV_SXP = 	  242,
- BASEENV_SXP =  241
+ BASEENV_SXP =  241,
  ATTRLANGSXP  =  240,
  ATTRLISTSXP =  239,
  ALTREP_SXP =  238
  
 )
+
+sexpType =
+function(val)    
+  names(SEXPMap)[match(val, SEXPMap)]
