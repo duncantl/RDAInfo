@@ -33,37 +33,61 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
            INTSXP =,
            REALSXP =, 
            CPLXSXP =,
-           STRSXP = readVector(con, elInfo, skipValue, hdr),
+           STRSXP = readVector(con, elInfo, skipValue, hdr, depth),
            CHARSXP = readCharsxp(con, skipValue, hdr),
            EXPRSXP = ,
-           VECSXP = readList(con, elInfo, skipValue, hdr),
+           VECSXP = readList(con, elInfo, skipValue, hdr, depty),
            NILSXP = ,
            NILVALUE_SXP = NULL,
            ENVSXP = readEnvironment(con, elInfo, skipValue, hdr),
            GLOBALENV_SXP = if(skipValue) defaultDesc(sexpType) else globalenv(),
-           EXTPTR_SXP = if(skipValue) defaultDesc(sexpType) else new("externalptr"),            # ???? attributes. Should be on the externalptr.
+           EXTPTRSXP = readExternalPointer(con, elInfo, skipValue, hdr, depth),
            EMPTYENV_SXP = emptyenv(),
-           BASEENV_SXP = getNamespace("base"),
+           BASEENV_SXP = ,
+           BASENAMESPACE_SXP = getNamespace("base"),           
            CLOSXP = readFunction(con, elInfo, skipValue, hdr),
            # both MISSINGARG_SXP and UNBOUNDVALUE_SXP correspond to
            # C level SYMSXPs that are not necessarily/obviously available to use at the R level.?????
            MISSINGARG_SXP = "bob", # XXXX   quote(foo(,))[[2]],  need to mimic R_MissingArg
            # UNBOUNDVALUE_SXP  
-           LANGSXP = readLangSEXP(con, elInfo, skipValue, hdr),
+           LANGSXP = readLangSEXP(con, elInfo, skipValue, hdr, depth),
            SYMSXP = as.name(readTag(con, elInfo)), #???
            SPECIALSXP=,
-           BUILTINSXP = readSpecial(con, elInfo, skipValue, hdr),
+           BUILTINSXP = readSpecial(con, elInfo, skipValue, hdr, depth),
            REFSXP = readREFSXP(con, ty),
+           BCODESXP = readBCODESXP(con, elInfo, skipValue, hdr, depth),
            # NAMESPACE_SXP
            # PACKAGESXP
            stop("unhandled type in ReadItem ", sexpType)
           )
 }
 
+
+############
+
 defaultDesc =
 function(type, length = NA, class = NA, names = NA, ...)
     data.frame(type = type, length = length, class = class, names = names, ...)
 
+addDescAttrs =
+function(desc, at)
+{
+    ats = names(at)
+    if(length(ats)) {
+        if("names" %in% names(at) && length(at$names))
+                ans$name = TRUE
+        if("class" %in% names(at) && length(at$class))
+                ans$class = at$class
+        if(!all(w <- (names(at) %in% c("names", "class"))))
+            warning("ignoring attribute names on vector: ", paste(names(at)[!w], collapse = ", "))
+    }
+    
+    desc
+}
+
+
+
+###########
 
 readEnvironment =
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
@@ -223,24 +247,6 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     ans
 }
 
-addDescAttrs =
-function(desc, at)
-{
-    ats = names(at)
-    if(length(ats)) {
-        if("names" %in% names(at) && length(at$names))
-                ans$name = TRUE
-        if("class" %in% names(at) && length(at$class))
-                ans$class = at$class
-        if(!all(w <- (names(at) %in% c("names", "class"))))
-            warning("ignoring attribute names on vector: ", paste(names(at)[!w], collapse = ", "))
-    }
-    
-    desc
-}
-
-
-
 ###########
 
 readSpecial =
@@ -352,7 +358,7 @@ function(con, len, skipValue = FALSE, hdr = NULL, depth = 0L)
 }
 
 readCharsxp =
-function(con, skipValue = FALSE, hdr = NULL)
+function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
 {
     nc = readInteger(con)
     if(skipValue) {
@@ -365,6 +371,35 @@ function(con, skipValue = FALSE, hdr = NULL)
     }
 }
 
+
+############
+
+readBCODESXP =
+function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
+{
+    browser()
+    len = readInteger(con)
+    code = ReadItem(con, skipValue = skipValue, hdr = hdr, depth + 1L)
+
+    len2 = readInteger()
+}
+
+
+#########
+
+readExternalPointer =
+function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
+{
+    prot = ReadItem(con, skipValue, hdr, depth + 1L)
+    tag = ReadItem(con, skipValue, hdr, depth + 1L)    
+    
+    # ???? attributes. Should be on the externalptr.
+    if(skipValue)
+        defaultDesc("EXTPTRSXP")
+    else {
+      ans = new("externalptr")
+    }
+}
 
 #################
 
