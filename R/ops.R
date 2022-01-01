@@ -46,7 +46,10 @@ function(x, ...)
     # message or cat??
     message("file: ", attr(x, "file"))
     message("encoding: ", attr(x, "header")$native_encoding, "\n")
-    print(as.data.frame(x))
+    if(length(x) == 1)
+        print(unclass(x)[[1]])
+    else
+        print(as.data.frame(x))
 }
 
 as.data.frame.RDAToc =
@@ -78,7 +81,6 @@ function(x, i, j, ...)
         if(!all(w <- (i %in% names(x))))
             stop( paste(i[!w], collapse = ", "), " not in rda file")
     }
-
 
     if(any(duplicated(i))) 
        structure(lapply(unique(i), function(id) x[[id]]), names = unique(i))[i]
