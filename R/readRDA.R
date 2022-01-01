@@ -33,12 +33,15 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
            INTSXP =,
            REALSXP =, 
            CPLXSXP =,
-           STRSXP = readVector(con, elInfo, skipValue, hdr), 
+           STRSXP = readVector(con, elInfo, skipValue, hdr),
+           CHARSXP = readCharsxp(con, skipValue, hdr),
+           EXPRSXP = ,
            VECSXP = readList(con, elInfo, skipValue, hdr),
            NILSXP = ,
            NILVALUE_SXP = NULL,
            ENVSXP = readEnvironment(con, elInfo, skipValue, hdr),
            GLOBALENV_SXP = if(skipValue) defaultDesc(sexpType) else globalenv(),
+           EXTPTR_SXP = if(skipValue) defaultDesc(sexpType) else new("externalptr"),            # ???? attributes. Should be on the externalptr.
            EMPTYENV_SXP = emptyenv(),
            BASEENV_SXP = getNamespace("base"),
            CLOSXP = readFunction(con, elInfo, skipValue, hdr),
@@ -48,7 +51,9 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
            # UNBOUNDVALUE_SXP  
            LANGSXP = readLangSEXP(con, elInfo, skipValue, hdr),
            SYMSXP = as.name(readTag(con, elInfo)), #???
-           # REFSXP
+           SPECIALSXP=,
+           BUILTINSXP = readSpecial(con, elInfo, skipValue, hdr),
+           REFSXP = readREFSXP(con, ty),
            # NAMESPACE_SXP
            # PACKAGESXP
            stop("unhandled type in ReadItem ", sexpType)
@@ -107,15 +112,18 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 {
     ans = list()
     positions = numeric()
+    ty = info
     while(TRUE) {
         pos = seek(con)
-        if(info["hastag"]) {
+        if(ty["hastag"]) {   # was info not ty
             name = readTag(con)
             positions[name] = pos
         } else
             name = length(ans) + 1L
+
         value = ReadItem(con, skipValue, hdr, depth = depth + 1L)
         ans[[name]] = value
+
         ty = readType(con)
         if(ty["type"] == NILVALUE_SXP || ty["type"] == NILSXP)
             break
@@ -208,21 +216,49 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 }
 
 
+###########
+
+readSpecial =
+function(con, skipValue = FALSE, hdr = NULL, depth = 0L)    
+{
+    recover()
+    nc = readInteger(con)
+    str = readBin(con, 'raw', nc)  # OR readChar() ?
+    # We could map this the name of the special/builtin by reading the R_FunTab via Rllvm offline and having this available.
+    str
+}
+
+    
 
 #############
+
+readLENGTH =
+function(con)    
+{
+    len = readInteger(con)
+    if(len == -1) {
+        lens = replicate(2, readInteger(con))
+        bitShiftL(lens[1], 32) + lens[2]
+    } else
+        len
+}
 
 readList =
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
-    len = readInteger(con)
+    len = readLENGTH(con)      #XXX TEST with large vectors. (previously... may need to make this readLength() to deal with larger values.)
+
     ans = replicate(len, ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L), simplify = FALSE)
     if(info["hasattr"] > 0) {
         at = readAttributes(con, skipValue = FALSE, hdr = FALSE, depth = depth + 1L)
-        #XXXX what to do with them if skipValue = true.
+        #XXXX what to do with them if skipValue = TRUE.
         attributes(ans) = at
     }
 
-    ans
+    if(info['type'] == ENVSXP)
+        as.expression(ans)
+    else
+        ans
 }
 
 readVector =
@@ -298,6 +334,7 @@ function(con, skipValue = FALSE, hdr = NULL)
     nc = readInteger(con)
     if(skipValue) {
         seek(con, nc, "current")
+        "skipped CHARSXP"
     } else {
         chars = readBin(con, 'raw', nc)
         rawToChar(chars)
@@ -320,13 +357,26 @@ function(con, info = NULL)
         info = unpackFlags(flags)
     }
 
+    if(info['type'] == REFSXP) 
+        return(readREFSXP(con, flags))
+    
     flags = readInteger(con)
 ty = unpackFlags(flags)
-if(ty["type"] != 9) browser()    
+if(ty["type"] != 9) recover()    
     # type for this had better be 9
     readCharsxp(con)
 }
 
+readREFSXP =
+function(con, flags)    
+{
+        #XXX bad!!!!! readInteger(con)
+    ref = bitShiftR(flags, 8)
+    if(ref == 0)
+        ref = readInteger(ref)
+    
+    return(structure(as.character(ref), class = "REFSXP"))
+}
 
 
 # 
