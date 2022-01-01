@@ -150,10 +150,9 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
 readLangSEXP =
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
-    #   readFunction(con, info, skipValue, hdr)
     at = NULL
     tag = NULL
-    if(info["hasattr"])
+    if(info["hasattr"]) 
         at = ReadItem(con, skipValue = FALSE, hdr)
     if(info["hastag"])
         tag = ReadItem(con, skipValue = FALSE, hdr)
@@ -163,6 +162,11 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 
     if(skipValue) {
         ans = defaultDesc("LANGSXP")
+        if(length(at)) {
+            if("class" %in% names(at))
+                ans$class = at[["class"]]
+        }
+        
     } else {
          #XXX only if car is a name, not a call.
         ans = if(is.name(car))
