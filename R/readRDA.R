@@ -170,10 +170,7 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 
     if(skipValue) {
         ans = defaultDesc("LANGSXP")
-        if(length(at)) {
-            if("class" %in% names(at))
-                ans$class = at[["class"]]
-        }
+        ans = addDescAttrs(ans, at)
         
     } else {
          #XXX only if car is a name, not a call.
@@ -206,26 +203,57 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     formals = ReadItem(con, skipValue = FALSE, hdr = hdr)
     body = ReadItem(con, skipValue, hdr = hdr)
 
-    browser()
-    ans = NULL
-    if(!is.null(at)) {
+#    browser()
 
+    if(skipValue) {
+        ans = defaultDesc("CLOSXP", numParams = length(formals))
+        if(!is.null(at)) 
+            ans = addDescAttrs(ans, at)
+    } else {
+        ans = function() 1
+        browser()
+        # probably have to do this element by element
+        #XXXXX   fix
+        formals(ans)[seq(along.with = formals)] = formals 
+        body(ans) = body
+        environment(ans) = env
+        attributes(ans) = at
     }
-
+    
     ans
 }
+
+addDescAttrs =
+function(desc, at)
+{
+    ats = names(at)
+    if(length(ats)) {
+        if("names" %in% names(at) && length(at$names))
+                ans$name = TRUE
+        if("class" %in% names(at) && length(at$class))
+                ans$class = at$class
+        if(!all(w <- (names(at) %in% c("names", "class"))))
+            warning("ignoring attribute names on vector: ", paste(names(at)[!w], collapse = ", "))
+    }
+    
+    desc
+}
+
 
 
 ###########
 
 readSpecial =
-function(con, skipValue = FALSE, hdr = NULL, depth = 0L)    
+function(con, elInfo, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
-    recover()
     nc = readInteger(con)
-    str = readBin(con, 'raw', nc)  # OR readChar() ?
-    # We could map this the name of the special/builtin by reading the R_FunTab via Rllvm offline and having this available.
-    str
+    str = rawToChar(readBin(con, 'raw', nc))     # OR readChar() ?
+    # ??? We could map this the name of the special/builtin by reading the R_FunTab via Rllvm offline and having this available.
+    #  Is that what the code in serialize is doing???
+    if(skipValue)
+        defaultDesc(sexpType(elInfo['type']), id = str)
+    else        
+        get(str, getNamespace("base")) #????  is this always appropriate?
 }
 
     
@@ -302,14 +330,9 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 
     if(info['hasattr'] > 0) {
         at = readAttributes(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
-        if(skipValue) {
-            if("names" %in% names(at) && length(at$names))
-                ans$name = TRUE
-            if("class" %in% names(at) && length(at$class))
-                ans$class = at$class
-            if(!all(w <- (names(at) %in% c("names", "class"))))
-                warning("ignoring attribute names on vector: ", paste(names(at)[!w], collapse = ", "))
-        } else
+        if(skipValue) 
+            addDescAttrs(ans, at)
+        else
             attributes(ans) = at
     }
     
@@ -361,9 +384,10 @@ function(con, info = NULL)
         return(readREFSXP(con, flags))
     
     flags = readInteger(con)
-ty = unpackFlags(flags)
-if(ty["type"] != 9) recover()    
-    # type for this had better be 9
+
+#Sanity check.  Leave for now.  Make assert() that we can disable as a no-op.
+if(unpackFlags(flags)["type"] != 9) recover()    
+
     readCharsxp(con)
 }
 
