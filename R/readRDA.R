@@ -36,7 +36,7 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
            STRSXP = readVector(con, elInfo, skipValue, hdr, depth),
            CHARSXP = readCharsxp(con, skipValue, hdr),
            EXPRSXP = ,
-           VECSXP = readList(con, elInfo, skipValue, hdr, depty),
+           VECSXP = readList(con, elInfo, skipValue, hdr, depth),
            NILSXP = ,
            NILVALUE_SXP = NULL,
            ENVSXP = readEnvironment(con, elInfo, skipValue, hdr),
