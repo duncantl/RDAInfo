@@ -174,7 +174,10 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
               else
                   substitute(f(), list(f = car))
         if(length(cdr))
-           ans[seq(along.with = cdr) + 1L] = cdr
+            ans[seq(along.with = cdr) + 1L] = cdr
+
+        if(length(at))
+            attributes(ans) = at
     }
     ans
 }
