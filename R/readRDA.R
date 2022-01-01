@@ -37,7 +37,8 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
            VECSXP = readList(con, elInfo, skipValue, hdr),
            NILSXP = ,
            NILVALUE_SXP = NULL,
-           GLOBALENV_SXP = globalenv(),
+           ENVSXP = readEnvironment(con, elInfo, skipValue, hdr),
+           GLOBALENV_SXP = if(skipValue) defaultDesc(sexpType) else globalenv(),
            EMPTYENV_SXP = emptyenv(),
            BASEENV_SXP = getNamespace("base"),
            CLOSXP = readFunction(con, elInfo, skipValue, hdr),
@@ -46,7 +47,7 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
            MISSINGARG_SXP = "bob", # XXXX   quote(foo(,))[[2]],  need to mimic R_MissingArg
            # UNBOUNDVALUE_SXP  
            LANGSXP = readLangSEXP(con, elInfo, skipValue, hdr),
-           SYMSXP = readTag(con, elInfo), #???
+           SYMSXP = as.name(readTag(con, elInfo)), #???
            # REFSXP
            # NAMESPACE_SXP
            # PACKAGESXP
@@ -54,6 +55,51 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
           )
 }
 
+defaultDesc =
+function(type, length = NA, class = NA, names = NA, ...)
+    data.frame(type = type, length = length, class = class, names = names, ...)
+
+
+readEnvironment =
+function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
+{
+    locked = readInteger(con)
+    enclos = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth)
+    frame = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth)
+    hashtab = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth)
+    at = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth)
+
+    nonNull = !sapply(hashtab, is.null)
+    hashtab = hashtab[nonNull]
+    
+    if(skipValue) {
+        ans = defaultDesc("ENVSXP")
+        ans$locked = locked
+        ans$enclos = enclos
+        ans$frame = frame
+        ans$length = length(hashtab)
+        ans$names  = names(hashtab)
+        ans$allocatedLength = length(nonNull)
+    } else {
+        ans = new.env()
+        if(identical(enclos,  globalenv()))
+            parent.env(ans) = globalenv()
+        else if(is.environment(enclos))
+            parent.env(ans) = globalenv()
+        else
+            stop("fix this")
+
+        attributes(ans) =  at
+        # What to do with the frame?
+
+        ##XXX check this works generally
+        lapply(hashtab, function(x) assign(names(x), x[[1]], ans))
+    }
+    
+    ans
+    # for the two items env:
+    # globalenv, null (254), then 19, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 2, 1, 9, 16, 9, 9, 9, 254, 2, 1, 9, 14, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254
+}
 
 
 readPairList =
@@ -63,8 +109,11 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     positions = numeric()
     while(TRUE) {
         pos = seek(con)
-        name = readTag(con)
-        positions[name] = pos
+        if(info["hastag"]) {
+            name = readTag(con)
+            positions[name] = pos
+        } else
+            name = length(ans) + 1L
         value = ReadItem(con, skipValue, hdr, depth = depth + 1L)
         ans[[name]] = value
         ty = readType(con)
@@ -72,8 +121,7 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
             break
     }
 
-    if(depth == 0) {
-#        browser()
+    if(depth == 0 && skipValue) {
         ans = mapply(function(d, p) { d$offset = p; d}, ans, positions, SIMPLIFY = FALSE)
         class(ans) = "RDAToc"
     }
@@ -103,8 +151,28 @@ readLangSEXP =
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     #   readFunction(con, info, skipValue, hdr)
-    k = ReadItem(con, skipValue = FALSE, hdr)
-    browser()
+    at = NULL
+    tag = NULL
+    if(info["hasattr"])
+        at = ReadItem(con, skipValue = FALSE, hdr)
+    if(info["hastag"])
+        tag = ReadItem(con, skipValue = FALSE, hdr)
+
+    car = ReadItem(con, skipValue = skipValue, hdr)
+    cdr = ReadItem(con, skipValue = skipValue, hdr)
+
+    if(skipValue) {
+        ans = defaultDesc("LANGSXP")
+    } else {
+         #XXX only if car is a name, not a call.
+        ans = if(is.name(car))
+                  call(as.character(car))
+              else
+                  substitute(f(), list(f = car))
+        if(length(cdr))
+           ans[seq(along.with = cdr) + 1L] = cdr
+    }
+    ans
 }
 
 
@@ -285,8 +353,12 @@ function(val)
 readHeader =
 function(con)    
 {
+    if(is.character(con)) {
+        con = gzfile(con, "rb")
+        on.exit(close(con))
+    }
+    
     start = readChar(con, 5L, useBytes = TRUE)
-    # gives "RDX3\n"
 
     format = readBin(con, 'raw', 2L) 
     format = trimws(rawToChar(format))
@@ -300,9 +372,14 @@ function(con)
     info$version = versions[1]
     info[c("writer_version", "min_reader_version")] = lapply(versions[2:3], decodeVersion)
 
-    # Get the encoding
-    nc = readInteger(con)
-    info$native_encoding = rawToChar(readBin(con, 'raw', nc))
+    if(info$version[1] >= 3) {
+        # Get the encoding
+        nc = readInteger(con)
+        info$native_encoding = rawToChar(readBin(con, 'raw', nc))
+    } else {
+        info$native_encoding = NA
+        warning("RDA format is version ", info$version[1])
+    }
     
     info
 }
@@ -314,7 +391,7 @@ decodeVersion =
     # SO for % as bit operation.
     #  https://stackoverflow.com/questions/3072665/bitwise-and-in-place-of-modulus-operator
     #
-function(val)    
+function(val, asString = FALSE)    
 {
     ver = integer(3)
     ver[1] = bitShiftR(val, 16)
@@ -322,5 +399,8 @@ function(val)
     ver[2] = bitShiftR(val, 8)
     ver[3] = bitAnd(val, 2^8 - 1L)
 
-    ver
+    if(asString)
+        paste(ver, collapse = ".")
+    else
+        ver
 }
