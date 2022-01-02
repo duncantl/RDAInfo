@@ -25,10 +25,13 @@ R_eatCharVectorElements(SEXP rConn, SEXP r_nels)
 	if(!xdr_int(&xdrs, &nchars))
 		error(("XDR read failed for integer/int"));
 
-	totalChars += nchars;
-	// want seek here rather than read.
-	R_ReadConnection(con, strBuf, nchars);
-	//con->seek(con, 2, 1)
+	// if nchars = -1, then NA_character_
+	if(nchars != -1) { 
+	    totalChars += nchars;
+	    // want seek here rather than read.
+	    R_ReadConnection(con, strBuf, nchars);
+	    //con->seek(con, 2, 1)
+	}
     }
     xdr_destroy(&xdrs);
     return(ScalarInteger(totalChars));
