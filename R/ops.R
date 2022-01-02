@@ -23,9 +23,8 @@ function(x, i, j, ...)
     } else
         con = file
 
-    
 # Seek on compressed files is not reliable, so we read from the beginning
-#seek(con, offset)
+# seek(con, offset)
     readBin(con, 'raw', offset) 
 
     header = attr(x, "header")
@@ -37,16 +36,7 @@ function(x, i, j, ...)
 
 `$.RDAToc` =
 function(x, name)    
-{
     x[[name]]
-}
-
-
-if(FALSE)  # don't need now with the file and header as attributes, not in an element named .meta.
-names.RDAToc =
-function(x)
-   setdiff(base::names(unclass(x)), ".meta")
-
 
 print.RDAToc =
 function(x, ...)
@@ -81,6 +71,9 @@ function(x, row.names = NULL, optional = FALSE, elNames = "union", ...)
 }
 
 getVars =
+    #
+    # given a data.frame, extract the variables given by vars
+    # adding them if they don't exist, giving them values of NA.
 function(df, vars)
 {
     w = vars %in% names(df) 
