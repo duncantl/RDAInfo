@@ -460,7 +460,7 @@ function(con, flags, hdr)
     if(ref == 0)
         ref = readInteger(ref)
 
-    return(get(as.character(ref), hdr$references))
+    return(get(as.character(ref-1L), hdr$references))
 }
 
 addRef = 
