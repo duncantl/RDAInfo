@@ -1,4 +1,5 @@
 import(bitops)
+useDynLib(RDAInfo)
 
 export(toc)
 S3method("[[", "RDAToc")
