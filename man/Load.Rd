@@ -51,7 +51,7 @@ Duncan Temple Lang
 }
 
 \seealso{
-\code{\link{load}}
+\code{\link[base]{load}}
 }
 \examples{
 

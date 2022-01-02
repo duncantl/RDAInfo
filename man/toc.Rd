@@ -40,10 +40,24 @@ Duncan Temple Lang
 }
 
 \seealso{
-
+  \code{\link[base]{load}}   and  \code{\link{Load}} in this package.
 }
 \examples{
+  f = system.file("sampleRDA", "test.rda", package = "RDAInfo")
+  info = toc(f)
 
+  print(info)
+
+  # get the first element
+  info[[1]]
+  info[["mx"]]
+  info$mx
+  info[c("d", "a")]
+
+  info2 = as.data.frame(info)
+  info2$offset
 }
 \keyword{IO}
 \concept{deserialization}
+
+
