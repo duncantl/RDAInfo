@@ -98,7 +98,7 @@ function(type, length = NA, class = NA, names = NA, ...)
 
 
 addDescAttrs =
-function(desc, at)
+function(desc, at, all = TRUE)
 {
     ats = names(at)
     if(length(ats)) {
@@ -113,8 +113,15 @@ function(desc, at)
                 desc$class = at$class  # XXX what about length > 1 vectors.
 
         
-        if(!all(w <- (names(at) %in% c("names", "class"))))
-            warning("ignoring attribute names on vector: ", paste(names(at)[!w], collapse = ", "))
+        if(!all(w <- (names(at) %in% c("names", "class")))) {
+            if(all) {
+                vars = names(at)[!w]
+                for(i in vars)
+                    desc[[i]] = if(length(at[[vars]]) > 1) list(at[[vars]]) else at[[vars]]
+            } else
+                warning("ignoring attribute names on vector: ", paste(names(at)[!w], collapse = ", "))
+        }
+        
     }
     
     desc
@@ -128,6 +135,14 @@ readEnvironment =
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     locked = readInteger(con)
+    if(skipValue)
+        ans = defaultDesc("ENVSXP")
+    else
+        ans = new.env()
+
+     # storing the id in case we need to update the value in hdr$references.
+    id = addRef(ans, hdr$references)
+    
     enclos = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth)
     frame = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth)
     hashtab = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth)
@@ -137,7 +152,6 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     hashtab = hashtab[nonNull]
     
     if(skipValue) {
-        ans = defaultDesc("ENVSXP")
         ans$locked = locked
         ans$enclos = enclos
         ans$frame = frame
@@ -145,7 +159,6 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
         ans$names  = names(hashtab)
         ans$allocatedLength = length(nonNull)
     } else {
-        ans = new.env()
         if(identical(enclos,  globalenv()))
             parent.env(ans) = globalenv()
         else if(is.environment(enclos))
@@ -343,7 +356,9 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
             colInfo = ans
             ans = defaultDesc(sexpType(info['type']), length = len, class = class)
             if(!is.na(class) && "data.frame" %in% class) {
+                #XXX  call addDescAttrs() directly. Don't do this here.
                 ans$names = list(at$names)
+                ans$dim = list(c(colInfo[[1]]$length, len))
                 ans$hasRowNames = "row.names" %in% names(at) && length(at$row.names) > 0
                 ans$colInfo = list(sapply(colInfo, `[[`, "type"))
             }
@@ -395,8 +410,9 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 
     if(info['hasattr'] > 0) {
         at = readAttributes(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
+
         if(skipValue) 
-            addDescAttrs(ans, at)
+            ans = addDescAttrs(ans, at)
         else
             attributes(ans) = at
     }
@@ -517,8 +533,10 @@ function(val, env)
     if(!is.null(v <- attr(env, "locked")) && v)
         return(NULL)
     
-    count = length(ls(env)) 
-    assign(as.character(count), val, env)
+    count = length(ls(env))
+    id = as.character(count)
+    assign(id, val, env)
+    id
 }
 
 
