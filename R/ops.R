@@ -1,4 +1,4 @@
-`[[.RDAToc` =
+`[[.RDAToc` =  
     #
     # Puzzles for reader
     #  if i has length > 1, do this hierarchically
@@ -109,10 +109,39 @@ function(x, i, j, ...)
             stop( paste(i[!w], collapse = ", "), " not in rda file")
     }
 
-    if(any(duplicated(i))) 
-       structure(lapply(unique(i), function(id) x[[id]]), names = unique(i))[i]
-    else
-       structure(lapply(i, function(id) x[[id]]), names = i)    
+    return(readVariables(attr(x, "file"), i, x, attr(x, "header")))
+
+#   if(any(duplicated(i))) 
+#      structure(lapply(unique(i), function(id) x[[id]]), names = unique(i))[i]
+#   else
+#      structure(lapply(i, function(id) x[[id]]), names = i)        
 }
+
+
+# readVariables(f, c("m", "a", "d", "m"), info)
+readVariables =
+function(file, vars, info, hdr)
+{
+    uvars = unique(vars)
+    offsets = sapply(unclass(info), `[[`, "offset")[uvars]
+   
+    off = sort(offsets)
+
+      # Would prefer to seek, but doesn't work for gzfile()'s
+    jumpTo = function(pos)
+                readBin(con, 'raw', pos - seek(con))
+
+    con = gzfile(file, "rb")
+    on.exit(close(con))
+    
+    ans = lapply(off, function(pos) {
+                         jumpTo(pos)
+                         ReadItem(con, FALSE, hdr = hdr)
+                         ReadItem(con, FALSE, hdr = hdr)                    
+                      })
+    
+    ans[vars]
+}
+
 
 

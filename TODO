@@ -22,7 +22,8 @@ check  BUILTINSXP =    8
 √ ENVSXP = 	     4	  
 √ SYMSXP
 
-+ seek() on a gzfile to an offset is not working reliably. 
+
++ [ok but could be better]  seek() on a gzfile to an offset is not working reliably. 
   + Fine for uncompressed save() files.
   + This may not be possible, or we have to go in smaller steps.
       + https://stackoverflow.com/questions/30834963/seeking-on-a-gz-connection-is-unpredictable
@@ -30,22 +31,22 @@ check  BUILTINSXP =    8
   + We can read from the start to the offset and discard what we read just to get to the offset.
 + References for ENVSXP.
 
-+ TEST SUITE
++ TEST SUITE - create
 
 + [test] Capture the references.
-   + Need to them for symsxps, environments, PACKAGESXP, PERSISTSXP, NAMESPACESXP, EXTPTRSXP, WEAKREFSXP, ....
+   + Need to them for √ symsxps, √ environments, PACKAGESXP, PERSISTSXP, NAMESPACESXP, EXTPTRSXP, WEAKREFSXP, ....
    + √ See Expression.rda.  The second call has "20" where a should be.
 
 
 + Handling character encoding.
    + The note in serialize.c "  strings without an encoding flag will be converted to the current native  encoding" indicates that the CHARSXP?/STRSXP may contain an encoding instruction.
-
+   + See ReadChar in serialize.c.  The encoding is in the levs flag.
 
 + References at the toplevel
    + save(a = obj,  b = obj) - same object.
    + capture concept that restoring b means binding to the value of a.
 
-+ 
++ Example objects to test.
    + CLOSXP with no default values, attributes, ...
    + calls with missing arguments
    + [leave] name for object in simpleFunction.  Seems to be 1,  not simpleFun.  This is how it is printing when there is only one object.  Fix when combine all the columns.
@@ -72,6 +73,10 @@ sapply(unclass(info), function(x) x$offset) # works
 ```
 The lapply is using the [[ and is deserializing the individual object!
 
+
++ √ make [.RDAToc open the file once, read the objects in order of smallest offset and jump to the
+  next amount.
+    + See [.RDAToc and readVariables()
 
 + √ When read the entire file in toc mode, then access an object, the second read/pass will add references that are already
   in the references.
