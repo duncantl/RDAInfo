@@ -447,6 +447,11 @@ function(con, len, skipValue = FALSE, hdr = NULL, depth = 0L, hasAttr = FALSE)
 }
 
 readCharsxp =
+    #
+    #
+    #  The encoding is in the levs flag.
+    #
+    #
 function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
 {
     nc = readInteger(con)
@@ -454,8 +459,12 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
         seek(con, nc, "current")
         "skipped CHARSXP"
     } else {
-        chars = readBin(con, 'raw', nc)
-        rawToChar(chars)
+        if(nc == -1)
+            NA_character_
+        else {
+            chars = readBin(con, 'raw', nc)
+            rawToChar(chars)
+        }
         # Use the encoding in hdr.
     }
 }
