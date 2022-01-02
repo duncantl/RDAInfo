@@ -6,7 +6,12 @@
     #
 function(x, i, j, ...)    
 {
-    if(!(i %in% names(x)))
+    if(is.numeric(i)) {
+        if(length(i) > length(x))
+            stop("index out of range")
+        
+        i = names(x)[i]
+    } else if(!(i %in% names(x)))
         return(NULL)
 
     offset = unclass(x)[[i]]$offset    
@@ -53,15 +58,32 @@ function(x, ...)
 }
 
 as.data.frame.RDAToc =
-function(x, row.names = NULL, optional = FALSE, ...)
+function(x, row.names = NULL, optional = FALSE, elNames = "union", ...)
 {
     vars = names(x)
     x = unclass(x)  # leave as we will probably add a [.RDAToc method and then that would call that.
-    tmp = do.call(rbind, lapply(x, function(x) x[, c("type", "length", "class", "offset")]))
+
+    if(length(elNames) == 1 && elNames == "union")
+        elNames = unique(unlist(lapply(x, names)))
+    else if(elNames == "intersect") {
+        tt = table(unlist(lapply(x, names)))
+        elNames = names(tt) [ tt == length(x) ]
+    }
+    
+    tmp = do.call(rbind, lapply(x, getVars, elNames)) # c("type", "length", "class", "offset")
     rownames(tmp) = vars
     tmp
 }
 
+getVars =
+function(df, vars)
+{
+    w = vars %in% names(df) 
+    ans = df[, vars[w]]
+    ans[ vars[!w] ] = NA
+    ans[, vars]
+}
+        
 
 `[.RDAToc` =
 function(x, i, j, ...)
