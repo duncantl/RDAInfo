@@ -13,9 +13,13 @@ function(file)
         stop("invalid value of file")
 
     header = readHeader(con)
+
+    header$references = new.env(parent = emptyenv())
+    
     ans = ReadItem(con, TRUE, hdr = header, depth = 0L)
     attr(ans, "file") = file
     attr(ans, "header") = header
+
     ans
 }
 
@@ -48,18 +52,27 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
            CLOSXP = readFunction(con, elInfo, skipValue, hdr),
            # both MISSINGARG_SXP and UNBOUNDVALUE_SXP correspond to
            # C level SYMSXPs that are not necessarily/obviously available to use at the R level.?????
-           MISSINGARG_SXP = "bob", # XXXX   quote(foo(,))[[2]],  need to mimic R_MissingArg
+           MISSINGARG_SXP =structure(TRUE, class = "MISSINGARG_SXP"), #quote(foo(,))[[2]], # need to mimic R_MissingArg
+           # alist(x=)
            # UNBOUNDVALUE_SXP  
            LANGSXP = readLangSEXP(con, elInfo, skipValue, hdr, depth),
-           SYMSXP = as.name(readTag(con, elInfo)), #???
+           SYMSXP = readSYMSXP(con, elInfo, hdr),
            SPECIALSXP=,
            BUILTINSXP = readSpecial(con, elInfo, skipValue, hdr, depth),
-           REFSXP = readREFSXP(con, ty),
+           REFSXP = readREFSXP(con, ty, hdr),
            BCODESXP = readBCODESXP(con, elInfo, skipValue, hdr, depth),
            # NAMESPACE_SXP
            # PACKAGESXP
            stop("unhandled type in ReadItem ", sexpType)
           )
+}
+
+readSYMSXP =
+function(con, elInfo, hdr)    
+{
+    val = as.name(readTag(con, hdr, elInfo))
+    addRef(val, hdr$references)
+    val
 }
 
 
@@ -140,7 +153,7 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     while(TRUE) {
         pos = seek(con)
         if(ty["hastag"]) {   # was info not ty
-            name = readTag(con)
+            name = readTag(con, hdr)
             positions[name] = pos
         } else
             name = length(ans) + 1L
@@ -216,35 +229,39 @@ readFunction =
     #  See serialize.c::1135
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
-    # info says there is a tag . serialize for the output explicitly sets this.
+    # info says there is a tag . serialize for the output explicitly sets this.   What does this mean???????
     at = NULL
     if(info['hasattr'])
         at = readAttributes(con, skipValue = FALSE, hdr = hdr)
 
-#    tag = readTag(con)
-      # env
+
     env = ReadItem(con, skipValue = FALSE, hdr = hdr)
     formals = ReadItem(con, skipValue = FALSE, hdr = hdr)
     body = ReadItem(con, skipValue, hdr = hdr)
-
-#    browser()
 
     if(skipValue) {
         ans = defaultDesc("CLOSXP", numParams = length(formals))
         if(!is.null(at)) 
             ans = addDescAttrs(ans, at)
     } else {
-        ans = function() 1
-        browser()
-        # probably have to do this element by element
-        #XXXXX   fix
-        formals(ans)[seq(along.with = formals)] = formals 
+        ans = mkFormals(formals)
         body(ans) = body
         environment(ans) = env
-        attributes(ans) = at
+        #XXX add back when we have references working correctly. Eventhough the function isn't work, the print is all wrong with the attributes (srcref) set with no reference table.
+        #attributes(ans) = at
     }
     
     ans
+}
+
+mkFormals =
+function(parms, fun = function(){})
+{
+    formals(fun) = rep(alist(x=), length(parms))
+    names(formals(fun)) = names(parms)
+    hasDefault = !sapply(parms, inherits, "MISSINGARG_SXP")
+    formals(fun)[ which(hasDefault) ] = parms[hasDefault]
+    fun
 }
 
 ###########
@@ -408,7 +425,7 @@ function(con)
     unpackFlags(readInteger(con))
 
 readTag =
-function(con, info = NULL)
+function(con, hdr, info = NULL)
 {
     if(is.null(info)) {
         flags = readInteger(con)
@@ -416,26 +433,39 @@ function(con, info = NULL)
     }
 
     if(info['type'] == REFSXP) 
-        return(readREFSXP(con, flags))
+        return(readREFSXP(con, flags, hdr))
     
     flags = readInteger(con)
 
 #Sanity check.  Leave for now.  Make assert() that we can disable as a no-op.
 if(unpackFlags(flags)["type"] != 9) recover()    
 
-    readCharsxp(con)
+    val = readCharsxp(con)
+    addRef(val, hdr$references)
+    val
 }
 
 readREFSXP =
-function(con, flags)    
+function(con, flags, hdr)    
 {
         #XXX bad!!!!! readInteger(con)
     ref = bitShiftR(flags, 8)
     if(ref == 0)
         ref = readInteger(ref)
-    
+
+#    return(get(as.character(ref-1), hdr$references))
     return(structure(as.character(ref), class = "REFSXP"))
 }
+
+addRef = 
+function(val, env)
+{
+    count = length(ls(env)) + 1L
+    assign(as.character(count), val, env)
+}
+
+
+        
 
 
 # 
