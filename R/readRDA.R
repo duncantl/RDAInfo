@@ -89,17 +89,30 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 
 defaultDesc =
 function(type, length = NA, class = NA, names = NA, ...)
-    data.frame(type = type, length = length, class = class, names = names, ...)
+{
+    ans = data.frame(type = type, length = length, class = class, ...)
+    if(length(names) > 1)
+        ans$names = list(names)
+    ans
+}
+
 
 addDescAttrs =
 function(desc, at)
 {
     ats = names(at)
     if(length(ats)) {
-        if("names" %in% names(at) && length(at$names))
+        if("names" %in% names(at) && length(at$names)) {
                 desc$name = TRUE
+                if(length(at$names) > 1) {
+                    desc$name = list(at$names)
+                } else
+                    desc$name = at$names
+        }
         if("class" %in% names(at) && length(at$class))
-                desc$class = at$class
+                desc$class = at$class  # XXX what about length > 1 vectors.
+
+        
         if(!all(w <- (names(at) %in% c("names", "class"))))
             warning("ignoring attribute names on vector: ", paste(names(at)[!w], collapse = ", "))
     }
@@ -346,10 +359,10 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 {
     len = readInteger(con)
     ty = sexpType(info["type"])
-#    browser()
+
     if(ty == "STRSXP") {
         #XXXX need to handle attributes on the character vector.
-        return(readCharacterVector(con, len, skipValue = skipValue, hdr = hdr, depth = depth + 1L))
+        return(readCharacterVector(con, len, skipValue = skipValue, hdr = hdr, depth = depth + 1L, hasAttr = info['hasattr'] > 0))
     }
     
     itemSize = switch(ty,
@@ -360,8 +373,8 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
                       CPLXSXP = 16L)
 
     ans = if(skipValue) {
-              if(ty == "STRSXP") 
-                  readCharacterVector(con, len, skipValue, hdr = hdr, depth = depth + 1L)
+              if(ty == "STRSXP")  # Isn't this handled above???
+                  readCharacterVector(con, len, skipValue, hdr = hdr, depth = depth + 1L, hasAttr = info['hasattr'] > 0)
               else 
                   seek(con, len * itemSize, origin = "current")
 
@@ -392,15 +405,29 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 }
 
 readCharacterVector =
-function(con, len, skipValue = FALSE, hdr = NULL, depth = 0L)    
+function(con, len, skipValue = FALSE, hdr = NULL, depth = 0L, hasAttr = FALSE)    
 {
     # Need to know if to process attributes or leave this to readVector???
     if(skipValue) {
         #nc = replicate(len, { readInteger(con); nchar = readInteger(con); seek(con, nchar, "current"); nchar})
         nc = .Call("R_eatCharVectorElements", con, len)
         ans = data.frame(type = "STRSXP", length = len, class = NA, names = FALSE, totalNumCharacters = sum(nc))
-    } else 
-        replicate(len, { readInteger(con); readCharsxp(con, skipValue = skipValue, hdr = hdr)})
+    } else {
+        #XXX this will be very slow
+        ans = replicate(len, { readInteger(con); readCharsxp(con, skipValue = skipValue, hdr = hdr)})
+    }
+
+    if(hasAttr) {
+        at = readAttributes(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
+        if(skipValue) {
+            ans = addDescAttrs(ans, at)
+        } else 
+            attributes(ans) = at
+
+    }
+
+    ans
+    
 }
 
 readCharsxp =
