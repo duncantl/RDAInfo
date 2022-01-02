@@ -23,7 +23,10 @@ function(x, i, j, ...)
     } else
         con = file
 
-    seek(con, offset)
+    
+# Seek on compressed files is not reliable, so we read from the beginning
+#seek(con, offset)
+    readBin(con, 'raw', offset) 
 
     header = attr(x, "header")
     # Read the tag
@@ -111,3 +114,5 @@ function(x, i, j, ...)
     else
        structure(lapply(i, function(id) x[[id]]), names = i)    
 }
+
+

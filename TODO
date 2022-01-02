@@ -22,6 +22,12 @@ check  BUILTINSXP =    8
 √ ENVSXP = 	     4	  
 √ SYMSXP
 
++ seek() on a gzfile to an offset is not working reliably. 
+  + Fine for uncompressed save() files.
+  + This may not be possible, or we have to go in smaller steps.
+      + https://stackoverflow.com/questions/30834963/seeking-on-a-gz-connection-is-unpredictable
+      + explore if this is something we can "fix" in R or is it a characteristic of gunzip.
+  + We can read from the start to the offset and discard what we read just to get to the offset.
 + References for ENVSXP.
 
 + TEST SUITE
