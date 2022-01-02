@@ -110,22 +110,20 @@ function(x, i, j, ...)
     }
 
     return(readVariables(attr(x, "file"), i, x, attr(x, "header")))
-
-#   if(any(duplicated(i))) 
-#      structure(lapply(unique(i), function(id) x[[id]]), names = unique(i))[i]
-#   else
-#      structure(lapply(i, function(id) x[[id]]), names = i)        
 }
 
 
-# readVariables(f, c("m", "a", "d", "m"), info)
 readVariables =
+# readVariables(f, c("m", "a", "d", "m"), info)
 function(file, vars, info, hdr)
 {
     uvars = unique(vars)
-    offsets = sapply(unclass(info), `[[`, "offset")[uvars]
-   
-    off = sort(offsets)
+    offsets = sapply(unclass(info), `[[`, "offset")
+
+    if(!all(w <- (vars  %in% names(offsets))))
+        stop("no variables named ", paste(unique(vars[!w]), collapse = ", "), " in ", f)
+
+    off = sort(offsets[uvars])
 
       # Would prefer to seek, but doesn't work for gzfile()'s
     jumpTo = function(pos)
@@ -136,8 +134,8 @@ function(file, vars, info, hdr)
     
     ans = lapply(off, function(pos) {
                          jumpTo(pos)
-                         ReadItem(con, FALSE, hdr = hdr)
-                         ReadItem(con, FALSE, hdr = hdr)                    
+                         ReadItem(con, FALSE, hdr = hdr) # variable name
+                         ReadItem(con, FALSE, hdr = hdr) # object    
                       })
     
     ans[vars]
