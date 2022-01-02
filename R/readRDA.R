@@ -24,7 +24,8 @@ function(file)
 }
 
 ReadItem =
-    # hdr is the header from readHeader() to provide context. 
+    # hdr is the header from readHeader() to provide context for all of the operations,
+    # specfically the native_encoding. And now the references container.
 function(con, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     ty = readInteger(con)
@@ -70,9 +71,7 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
 readSYMSXP =
 function(con, elInfo, hdr)    
 {
-    val = as.name(readTag(con, hdr, elInfo))
-    addRef(val, hdr$references)
-    val
+    as.name(readTag(con, hdr, elInfo))
 }
 
 #########
@@ -161,8 +160,9 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     while(TRUE) {
         pos = seek(con)
         if(ty["hastag"]) {   # was info not ty
-            name = readTag(con, hdr)
-            positions[name] = pos
+            name = readTag(con, hdr = hdr)
+              # name is likely to be a name/symbol object, so need to coerce to character.
+            positions[as.character(name)] = pos
         } else
             name = length(ans) + 1L
 
@@ -309,7 +309,7 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 
     ans = replicate(len, ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L), simplify = FALSE)
     if(info["hasattr"] > 0) {
-        at = readAttributes(con, skipValue = FALSE, hdr = FALSE, depth = depth + 1L)
+        at = readAttributes(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
         #XXXX what to do with them if skipValue = TRUE.
         attributes(ans) = at
     }
@@ -448,7 +448,7 @@ function(con, hdr, info = NULL)
 #Sanity check.  Leave for now.  Make assert() that we can disable as a no-op.
 if(unpackFlags(flags)["type"] != 9) recover()    
 
-    val = readCharsxp(con)
+    val = as.name(readCharsxp(con))
     addRef(val, hdr$references)
     val
 }
@@ -456,19 +456,17 @@ if(unpackFlags(flags)["type"] != 9) recover()
 readREFSXP =
 function(con, flags, hdr)    
 {
-        #XXX bad!!!!! readInteger(con)
     ref = bitShiftR(flags, 8)
     if(ref == 0)
         ref = readInteger(ref)
 
-#    return(get(as.character(ref-1), hdr$references))
-    return(structure(as.character(ref), class = "REFSXP"))
+    return(get(as.character(ref), hdr$references))
 }
 
 addRef = 
 function(val, env)
 {
-    count = length(ls(env)) + 1L
+    count = length(ls(env)) 
     assign(as.character(count), val, env)
 }
 

@@ -1,0 +1,68 @@
++ 18 SEXP types remaining
+√ EXPRSXP = 	    20	    check
+
+ BCODESXP =     21    ,
+ 
+check SPECIALSXP =    7	  ,
+check  BUILTINSXP =    8	  ,
+
+CLOSXP = 	     3	  ,
+
+
+ PROMSXP = 	     5	  ,
+ DOTSXP = 	    17	  ,
+ ANYSXP = 	    18	  ,  shouldn't see these
+ WEAKREFSXP =   23    ,
+ S4SXP =        25    ,
+ NEWSXP =       30    ,
+ FREESXP =      31    ,
+ FUNSXP =       99    ,
+
+√ VECSXP = 	    19	  ,
+√ LANGSXP = 	     6	  ,
+√ ENVSXP = 	     4	  ,
+√ SYMSXP
+
++ Registering each symsxp twice. and in pairs, i.e., not interspersed by others.
+   + solved - readSYMSXP() was calling readTag() and then registering the result. But readTag() was also registering the result.
+
+
++ √ Capture the references.
+   + Need to them for symsxps, environments, PACKAGESXP, PERSISTSXP, NAMESPACESXP, EXTPTRSXP, WEAKREFSXP, ....
+   + √ See Expression.rda.  The second call has "20" where a should be.
+
+
++ When read the entire file in toc mode, then access an object, the second read/pass will add references that are already
+  in the references.
+  + They don't do any harm, but are unnecessary.
+     + the second "pass" still uses the original indices so finds the original  insertions not the new ones.
+  + perhaps toc() "locks" the environment as it knows it has done a pass over the entire file
+      + addRef() would check for this lock add not add new references
+
+
++ References at the toplevel
+   + save(a = obj,  b = obj) - same object.
+   + capture that restoring b means binding to the value of a.
+
++ 
+   + CLOSXP with no default values, attributes, ...
+   + calls with missing arguments
+   + [leave] name for object in simpleFunction.  Seems to be 1,  not simpleFun.  This is how it is printing when there is only one object.  Fix when combine all the columns.
+
++ get file name from the connection
+   + summary(con)$description
+   + add it to the RDAToc object returned by toc() if we start with a connection.
+     + already do add file so that would be the connection and we can reopen it
+       if we are using it in, e.g., [[ or [
+
++ Test
+   + EXTPTRSXP =    22    ,
+      + with attributes - not supposed to put them on the externalptr itself, but legal.
+         + `z = toc("inst/sampleRDA/externalpointer_withAttrs.rda")`
+         + finishes the file but has 2 entries.
+
++ √ combine the data.frames when printing.
+
++ √ Implement [[ integer for RDAToc.
+
++ √ Fix putting formals() on the function in readFunction when not skipping value.
