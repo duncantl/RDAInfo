@@ -206,3 +206,17 @@ and will have to be garbage collected. (Nor has it summarized the variable types
 These two variations show the efficiency of factors in representing a large character vector with a small
 number of unique values.
 
+
+
+## Understanding the RDA XDR Stream
+
+The code in [R/readRDA.R](R/readRDA.R) reads the XDR stream.
+It identifies the different SEXP objects and processes their contents.
+
+A [tool](https://github.com/duncantl/LLDB_Scripting) that prints the SEXP type and the flags for the
+given SEXP element is useful for seeing the (hierarchical) structure of the stream.
+It uses the LLDB debugger to collect the information from the R serialize.c code and display it on
+the console (or collect it in a Python object.)
+
+
+
