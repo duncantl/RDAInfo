@@ -56,6 +56,17 @@ mx REALSXP     10       <NA>    FALSE                           NA    901       
 d   VECSXP      2 data.frame a, group                           NA   1046        NA                       NA 10, 2        TRUE REALSXP, INTSXP
 ```
 
+From this, we see 
++ the class on the data.frame `d`
++ whether it has row names
++ the column names and types for the data.frame
++ the dimensions for the data.frame and the matrix
++ the length of each object, except the function
++ the number of parameters in the function signature
++ the srcref is not very relevant.
+
+We have the offset in the file at which each of the objects starts.
+
 ## Marginally improved load()
 
 load with an option to only assign a subset would be a minor help in not overwriting existing variables
