@@ -17,6 +17,8 @@ function(file)
     header$references = new.env(parent = emptyenv())
     
     ans = ReadItem(con, TRUE, hdr = header, depth = 0L)
+    attr(header$references, "locked") = TRUE
+    
     attr(ans, "file") = file
     attr(ans, "header") = header
 
@@ -460,21 +462,20 @@ function(con, flags, hdr)
     if(ref == 0)
         ref = readInteger(ref)
 
-    return(get(as.character(ref-1L), hdr$references))
+    return(get(as.character(ref - 1L), hdr$references))
 }
 
 addRef = 
 function(val, env)
 {
+    if(!is.null(v <- attr(env, "locked")) && v)
+        return(NULL)
+    
     count = length(ls(env)) 
     assign(as.character(count), val, env)
 }
 
 
-        
-
-
-# 
 readInteger =
 function(con, nel = 1L)
 {
@@ -489,17 +490,15 @@ HAS_TAG_BIT_MASK =     bitShiftL(1, 10)
 
 unpackFlags =
     #
-    #  we don't conver the isobj, hasattr, hastag to LOGICALs
-    #  so that we can combine all in a vector.
-    #  These may be > 1  All we care is if 0 or not 0.
+    #  we don't convert the isobj, hasattr, hastag to LOGICALs
+    #  This is so that we can combine all the fields/flags in a single vector.
+    #  So these values may be > 1.  All we care is if 0 or not 0.
 function(val)    
     c(type = bitAnd(val, 255L),
       levels = bitShiftR(val,  12L),
       isobj = bitAnd(val, IS_OBJECT_BIT_MASK),
       hasattr = bitAnd(val, HAS_ATTR_BIT_MASK),
       hastag = bitAnd(val, HAS_TAG_BIT_MASK))
-
-
 
 
 readHeader =
