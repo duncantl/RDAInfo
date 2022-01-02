@@ -310,16 +310,35 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     len = readLENGTH(con)      #XXX TEST with large vectors. (previously... may need to make this readLength() to deal with larger values.)
 
     ans = replicate(len, ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L), simplify = FALSE)
+    at = NULL
     if(info["hasattr"] > 0) {
         at = readAttributes(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
         #XXXX what to do with them if skipValue = TRUE.
-        attributes(ans) = at
+
+        if(!skipValue)
+            attributes(ans) = at
     }
 
     if(info['type'] == ENVSXP)
         as.expression(ans)
-    else
+    else {
+        if(skipValue) {
+            class = NA
+            if(!is.null(at) && "class" %in% names(at))
+                class = at$class
+
+            colInfo = ans
+            ans = defaultDesc(sexpType(info['type']), length = len, class = class)
+            if(!is.na(class) && "data.frame" %in% class) {
+                ans$names = list(at$names)
+                ans$hasRowNames = "row.names" %in% names(at) && length(at$row.names) > 0
+                ans$colInfo = list(sapply(colInfo, `[[`, "type"))
+            }
+        }
+        
         ans
+    }
+    
 }
 
 readVector =
