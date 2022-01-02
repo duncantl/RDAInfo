@@ -44,16 +44,15 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
            NILSXP = ,
            NILVALUE_SXP = NULL,
            ENVSXP = readEnvironment(con, elInfo, skipValue, hdr),
-           GLOBALENV_SXP = if(skipValue) defaultDesc(sexpType) else globalenv(),
-           EXTPTRSXP = readExternalPointer(con, elInfo, skipValue, hdr, depth),
+           GLOBALENV_SXP = if(skipValue) defaultDesc(sexpType) else globalenv(),  # may need to add this and emptyenv to reference table.
            EMPTYENV_SXP = emptyenv(),
+           EXTPTRSXP = readExternalPointer(con, elInfo, skipValue, hdr, depth),
            BASEENV_SXP = ,
            BASENAMESPACE_SXP = getNamespace("base"),           
            CLOSXP = readFunction(con, elInfo, skipValue, hdr),
            # both MISSINGARG_SXP and UNBOUNDVALUE_SXP correspond to
            # C level SYMSXPs that are not necessarily/obviously available to use at the R level.?????
-           MISSINGARG_SXP =structure(TRUE, class = "MISSINGARG_SXP"), #quote(foo(,))[[2]], # need to mimic R_MissingArg
-           # alist(x=)
+           MISSINGARG_SXP =structure(TRUE, class = "MISSINGARG_SXP"), #quote(foo(,))[[2]], # need to mimic R_MissingArg       # alist(x=)
            # UNBOUNDVALUE_SXP  
            LANGSXP = readLangSEXP(con, elInfo, skipValue, hdr, depth),
            SYMSXP = readSYMSXP(con, elInfo, hdr),
@@ -61,6 +60,7 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
            BUILTINSXP = readSpecial(con, elInfo, skipValue, hdr, depth),
            REFSXP = readREFSXP(con, ty, hdr),
            BCODESXP = readBCODESXP(con, elInfo, skipValue, hdr, depth),
+           S4SXP = readS4(con, elInfo, skipValue,hdr, depth),
            # NAMESPACE_SXP
            # PACKAGESXP
            stop("unhandled type in ReadItem ", sexpType)
@@ -75,7 +75,15 @@ function(con, elInfo, hdr)
     val
 }
 
+#########
 
+readS4 =    
+function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
+{
+ browser()
+
+}
+    
 ############
 
 defaultDesc =
@@ -88,9 +96,9 @@ function(desc, at)
     ats = names(at)
     if(length(ats)) {
         if("names" %in% names(at) && length(at$names))
-                ans$name = TRUE
+                desc$name = TRUE
         if("class" %in% names(at) && length(at$class))
-                ans$class = at$class
+                desc$class = at$class
         if(!all(w <- (names(at) %in% c("names", "class"))))
             warning("ignoring attribute names on vector: ", paste(names(at)[!w], collapse = ", "))
     }
