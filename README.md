@@ -3,6 +3,7 @@
 The purposse of this package are to be able to deal with large R data (rda) files
 created via a call to save() **without loading**
 the R objects but 
+
 + providing a description of the top-level variables it contains without restoring the objects,
 + allowing deserializing one or a subset of the variables without restoring the others
 
@@ -57,6 +58,7 @@ d   VECSXP      2 data.frame a, group                           NA   1046       
 ```
 
 From this, we see 
+
 + the class on the data.frame `d`
 + whether it has row names
 + the column names and types for the data.frame
@@ -95,6 +97,7 @@ competitive.
 There are however several motivations:
 1.see how to implement a version that does not read the  values or create the R objects, but
   provides a summary of the top-level objects:
+  
     + names of variables
 	+ length and/or dimensions
 	+ types & classes
@@ -153,10 +156,12 @@ While we wrote this only today and haven't tested it much, this currently
 ## For an RDA file with 4 variables, each of length 1e7 (but separate variables)
 
 Contents of the RDA file are 4 vectors, each of length 1e7
+
   + numeric
   + numeric
   + numeric
   + factor
+
 268M uncompressed
 
 On a Macbook Pro (32Gb RAM) 
@@ -164,6 +169,7 @@ On a Macbook Pro (32Gb RAM)
 + load: .775 seconds
 + Table of Contents: .007 seconds 
 + Factor:  110.7
+
 (Medians over 5 runs)
 
 
@@ -190,6 +196,7 @@ On a Macbook Pro (32Gb RAM)
 + load: 3.6 seconds
 + Table of Contents: 1.8 seconds 
 + Speedup factor:  2.0
+
 (Medians over 5 runs, elapsed time)
 
 This doesn't take into account that the `load()` version has used a significant amount of memory
