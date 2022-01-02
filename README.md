@@ -34,6 +34,27 @@ And similarly,  `tc[ c("l", "let") ]` or `tc[ c(2, 3) ]`
 
 
 
+##
+
+A more recent example that takes the union of the fields in the description of each top-level object
+in the RDA:
+```r
+f = system.file("sampleRDA", "test.rda", package = "RDAInfo")
+info = toc(f)
+info
+```
+```
+file: /Users/duncan/Rpackages4/RDAInfo/sampleRDA/test.rda
+encoding: UTF-8
+
+      type length      class    names                         name offset numParams                   srcref   dim hasRowNames         colInfo
+a  REALSXP     10       <NA>    FALSE a, b, c, d, e, f, g, h, i, j     32        NA                       NA    NA          NA              NA
+b  REALSXP     10       <NA>    FALSE                           NA    260        NA                       NA    NA          NA              NA
+m   INTSXP      1       <NA>    FALSE                           NA    365        NA                       NA    NA          NA              NA
+f   CLOSXP     NA       <NA>       NA                           NA    394         1 1, 5, 1, 33, 5, 33, 1, 1    NA          NA              NA
+mx REALSXP     10       <NA>    FALSE                           NA    901        NA                       NA  5, 2          NA              NA
+d   VECSXP      2 data.frame a, group                           NA   1046        NA                       NA 10, 2        TRUE REALSXP, INTSXP
+```
 
 ## Marginally improved load()
 
