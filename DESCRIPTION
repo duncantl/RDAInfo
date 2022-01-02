@@ -1,11 +1,25 @@
-Package: RDAXDR
+Package: RDAInfo
 Version: 0-1.0
-Title: Read summary of RDA files in XDR format
-Description: This explores reading RDA files in R code
-  and getting the names and types of the variables it contains
-  without reading/deserializing the actual values.
-Author: DTL
+Title: Read summary of RDA  files and restore individual elements
+Description: This reads RDA (version 3, XDR format) files 
+  to get the names, types, lengths and positions/(offsets in the stream) of the
+  top-level variables it contains.  It does this without reading/deserializing the actual values.
+  It can also deserialize individual values.
+  Both of these make it useful when dealing with very large Rda files, especially if we only
+  want to find the names of the variables they contain, or want only a few objects from it.
+  While written in R, for large Rda files, it is faster for answering certain questions
+  that do not require restoring all the objects which is the only option the existing Rda deserialization
+  code offers.
+  It also provides an R implementation of the C code in serialize.c in the R source
+  with which people can experiement, specifically extensions to the format.
+Author: Duncan Temple Lang
 Maintainer: <duncan@r-project.org>
 License: BSD
 Imports: bitops
+Note: There are a few SEXP types that are not yet handled. Also, this does not read some RDA files
+  eventhough they were written using the version 3, XDR format.
+  Since it is R code, I encourage R programmers to explore adding this capability.
+  See https://github.com/duncantl/LLDB_Scripting for an instrumentation utility I found useful
+   for knowing the structure of a given Rda file.  
+
 
