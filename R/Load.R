@@ -1,5 +1,14 @@
 Load =
-function(file, envir = parent.frame(), verbose = FALSE, vars = character(), ...)
+    #
+    # this is a very simple layer on top of the load() function.
+    # It allows the caller to load() an RDA file and restore 
+    # a subset of the variables, not all of them.
+    # This avoids overwriting existing variables.
+    #
+    # This does read and restore all of the variables in the Rda file and discards the ones you
+    # don't want to keep.
+    #
+function(file, envir = parent.frame(), verbose = FALSE, vars = character(), ..., .noOverwrite = TRUE)
 {
     vars = c(vars, unlist(list(...)))
     
@@ -16,7 +25,7 @@ function(file, envir = parent.frame(), verbose = FALSE, vars = character(), ...)
     else if(any(w <- (names(vars) == "")))
          new.vars[w] = vars[w]        
 
-    mapply(function(v1, v2) assign(v1, get(v2, e), envir), new.vars, vars)
+    mapply(function(v1, v2) if(.noOverwrite && !exists(v1, envir)) assign(v1, get(v2, e), envir), new.vars, vars)
     invisible(vars)
 }
 
