@@ -20,6 +20,10 @@ Note: There are a few SEXP types that are not yet handled. Also, this does not r
   eventhough they were written using the version 3, XDR format.
   Since it is R code, I encourage R programmers to explore adding this capability.
   See https://github.com/duncantl/LLDB_Scripting for an instrumentation utility I found useful
-   for knowing the structure of a given Rda file.  
+   for knowing the structure of a given Rda file.
+  More interestingly, we have to figure out how to handle deserializing an object which includes
+  references to objects that appear earlier in the Rda stream.  Since we skip past those to start
+  reading the target object, any references will not be available. However, we can start reading
+  from the start and deserialize only the references we need.  This can become recursive.
 
 
