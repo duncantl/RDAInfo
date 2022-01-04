@@ -33,7 +33,9 @@ R_eatCharVectorElements(SEXP rConn, SEXP r_nels)
 	    //con->seek(con, 2, 1)
 	}
     }
-    xdr_destroy(&xdrs);
+    if(nels > 0)
+	xdr_destroy(&xdrs);
+    
     return(ScalarInteger(totalChars));
     //return(rConn);
 }
