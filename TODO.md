@@ -23,15 +23,40 @@ check  BUILTINSXP =    8
 √ SYMSXP
 
 
-+ [ok but could be better]  seek() on a gzfile to an offset is not working reliably. 
-  + Fine for uncompressed save() files.
-  + This may not be possible, or we have to go in smaller steps.
-      + https://stackoverflow.com/questions/30834963/seeking-on-a-gz-connection-is-unpredictable
-      + explore if this is something we can "fix" in R or is it a characteristic of gunzip.
-  + We can read from the start to the offset and discard what we read just to get to the offset.
-+ References for ENVSXP.
++ factor() example.
 
++ BCODESXP
+   + "~/OGS/SUForm/ProcessForm/June8.rda"
+   
++ ALTREP_SXP
+   + "~/OGS/COVID/WinterInstruction/AllCourses/AllCourses.rda"
+
++ NA for type
+   + "~/Davis/ComputerUsage/jobs.rda"
+   + type appears as 48.
+      + Run this via LLDB and our output of the sexp type, depth, hastag, hasattr.
+	     + want this to be stored in memory or written to a file. It is over 100K lines.
+
++ Look at the .RData files
+   + ~/OGS/PRCC/GTTP/.RData - seg faults.
+
++ Problem Fles
+  + "~/Personal/CV-orig/packageMetaInfo.rda"
+     + result from file.info() x 2
+  + √ "~/Personal/fbLogin.rda"
+
+
++ √ Find all functions that have a depth parameter and find all calls to those functions that don't include the depth.
+   + see depthArg.R
+   
+   
 + TEST SUITE - create
+
++ References at the toplevel
+   + save(a = obj,  b = obj) - same object.
+   + capture concept that restoring b means binding to the value of a.
+
+
 
 + [test] Capture the references.
    + Need to them for √ symsxps, √ environments, PACKAGESXP, PERSISTSXP, NAMESPACESXP, EXTPTRSXP, WEAKREFSXP, ....
@@ -41,10 +66,6 @@ check  BUILTINSXP =    8
 + Handling character encoding.
    + The note in serialize.c "  strings without an encoding flag will be converted to the current native  encoding" indicates that the CHARSXP?/STRSXP may contain an encoding instruction.
    + See ReadChar in serialize.c.  The encoding is in the levs flag.
-
-+ References at the toplevel
-   + save(a = obj,  b = obj) - same object.
-   + capture concept that restoring b means binding to the value of a.
 
 + Example objects to test.
    + CLOSXP with no default values, attributes, ...
@@ -71,8 +92,18 @@ info = toc(f)
 sapply(info, function(x) x$offset)
 sapply(unclass(info), function(x) x$offset) # works
 ```
-The lapply is using the [[ and is deserializing the individual object!
+  The lapply is using the [[ and is deserializing the individual object!
+  + A method for lapply()? for RDA.toc
 
++ [ok but could be better]  seek() on a gzfile to an offset is not working reliably. 
+  + Fine for uncompressed save() files.
+  + This may not be possible, or we have to go in smaller steps.
+      + https://stackoverflow.com/questions/30834963/seeking-on-a-gz-connection-is-unpredictable
+      + explore if this is something we can "fix" in R or is it a characteristic of gunzip.
+  + We can read from the start to the offset and discard what we read just to get to the offset.
+
+
++ √ References for ENVSXP.
 
 + √ make [.RDAToc open the file once, read the objects in order of smallest offset and jump to the
   next amount.
