@@ -1,4 +1,4 @@
-library(bitops)
+#library(bitops)
 
 toc =
 function(file)
@@ -32,38 +32,40 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
 {
     ty = readInteger(con)
     elInfo = unpackFlags(ty)
-
+print(unname(elInfo))
+    
     sexpType = sexpType(elInfo["type"])
     switch(sexpType,
-           LISTSXP = readPairList(con, elInfo, skipValue, hdr),
+           LISTSXP = readPairList(con, elInfo, skipValue, hdr, depth = depth),
            LGLSXP =,
            INTSXP =,
            REALSXP =, 
            CPLXSXP =,
            STRSXP = readVector(con, elInfo, skipValue, hdr, depth),
-           CHARSXP = readCharsxp(con, skipValue, hdr),
+           CHARSXP = readCharsxp(con, skipValue, hdr, depth = depth),
            EXPRSXP = ,
            VECSXP = readList(con, elInfo, skipValue, hdr, depth),
            NILSXP = ,
            NILVALUE_SXP = NULL,
-           ENVSXP = readEnvironment(con, elInfo, skipValue, hdr),
+           ENVSXP = readEnvironment(con, elInfo, skipValue, hdr, depth = depth),
            GLOBALENV_SXP = if(skipValue) defaultDesc(sexpType) else globalenv(),  # may need to add this and emptyenv to reference table.
            EMPTYENV_SXP = emptyenv(),
            EXTPTRSXP = readExternalPointer(con, elInfo, skipValue, hdr, depth),
            BASEENV_SXP = ,
            BASENAMESPACE_SXP = getNamespace("base"),           
-           CLOSXP = readFunction(con, elInfo, skipValue, hdr),
+           CLOSXP = readFunction(con, elInfo, skipValue, hdr, depth = depth),
            # both MISSINGARG_SXP and UNBOUNDVALUE_SXP correspond to
            # C level SYMSXPs that are not necessarily/obviously available to use at the R level.?????
-           MISSINGARG_SXP =structure(TRUE, class = "MISSINGARG_SXP"), #quote(foo(,))[[2]], # need to mimic R_MissingArg       # alist(x=)
+           MISSINGARG_SXP = structure(TRUE, class = "MISSINGARG_SXP"), #quote(foo(,))[[2]], # need to mimic R_MissingArg       # alist(x=)
            # UNBOUNDVALUE_SXP  
            LANGSXP = readLangSEXP(con, elInfo, skipValue, hdr, depth),
-           SYMSXP = readSYMSXP(con, elInfo, hdr),
+           SYMSXP = readSYMSXP(con, elInfo, hdr, depth = depth),
            SPECIALSXP=,
            BUILTINSXP = readSpecial(con, elInfo, skipValue, hdr, depth),
            REFSXP = readREFSXP(con, ty, hdr),
            BCODESXP = readBCODESXP(con, elInfo, skipValue, hdr, depth),
            S4SXP = readS4(con, elInfo, skipValue,hdr, depth),
+           ALTREP_SXP = readAltRepSXP(con, elInfo, skipValue, hdr, depth),
            # NAMESPACE_SXP
            # PACKAGESXP
            stop("unhandled type in ReadItem ", sexpType)
@@ -71,9 +73,9 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
 }
 
 readSYMSXP =
-function(con, elInfo, hdr)    
+function(con, elInfo, hdr, depth = 0L)    
 {
-    as.name(readTag(con, hdr, elInfo))
+    as.name(readTag(con, hdr, elInfo, depth = depth + 1L))
 }
 
 #########
@@ -117,7 +119,7 @@ function(desc, at, all = TRUE)
             if(all) {
                 vars = names(at)[!w]
                 for(i in vars)
-                    desc[[i]] = if(length(at[[vars]]) > 1) list(at[[vars]]) else at[[vars]]
+                    desc[[i]] = if(length(at[[i]]) > 1) list(at[[i]]) else at[[i]]
             } else
                 warning("ignoring attribute names on vector: ", paste(names(at)[!w], collapse = ", "))
         }
@@ -165,17 +167,16 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
             parent.env(ans) = globalenv()
         else
             stop("fix this")
-
+  
         attributes(ans) =  at
+        
         # What to do with the frame?
-
+        
         ##XXX check this works generally
         lapply(hashtab, function(x) assign(names(x), x[[1]], ans))
     }
     
     ans
-    # for the two items env:
-    # globalenv, null (254), then 19, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 2, 1, 9, 16, 9, 9, 9, 254, 2, 1, 9, 14, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254
 }
 
 
@@ -188,7 +189,7 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     while(TRUE) {
         pos = seek(con)
         if(ty["hastag"]) {   # was info not ty
-            name = readTag(con, hdr = hdr)
+            name = readTag(con, hdr = hdr, depth = depth + 1L)
               # name is likely to be a name/symbol object, so need to coerce to character.
             positions[as.character(name)] = pos
         } else
@@ -234,12 +235,12 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     at = NULL
     tag = NULL
     if(info["hasattr"]) 
-        at = ReadItem(con, skipValue = FALSE, hdr)
+        at = ReadItem(con, skipValue = FALSE, hdr, depth = depth + 1L)
     if(info["hastag"])
-        tag = ReadItem(con, skipValue = FALSE, hdr)
+        tag = ReadItem(con, skipValue = FALSE, hdr, depth = depth + 1L)
 
-    car = ReadItem(con, skipValue = skipValue, hdr)
-    cdr = ReadItem(con, skipValue = skipValue, hdr)
+    car = ReadItem(con, skipValue = skipValue, hdr, depth = depth + 1L)
+    cdr = ReadItem(con, skipValue = skipValue, hdr, depth = depth + 1L)
 
     if(skipValue) {
         ans = defaultDesc("LANGSXP")
@@ -268,12 +269,12 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     # info says there is a tag . serialize for the output explicitly sets this.   What does this mean???????
     at = NULL
     if(info['hasattr'])
-        at = readAttributes(con, skipValue = FALSE, hdr = hdr)
+        at = readAttributes(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
 
 
-    env = ReadItem(con, skipValue = FALSE, hdr = hdr)
-    formals = ReadItem(con, skipValue = FALSE, hdr = hdr)
-    body = ReadItem(con, skipValue, hdr = hdr)
+    env = ReadItem(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
+    formals = ReadItem(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
+    body = ReadItem(con, skipValue, hdr = hdr, depth = depth + 1L)
 
     if(skipValue) {
         ans = defaultDesc("CLOSXP", numParams = length(formals))
@@ -430,7 +431,7 @@ function(con, len, skipValue = FALSE, hdr = NULL, depth = 0L, hasAttr = FALSE)
         ans = data.frame(type = "STRSXP", length = len, class = NA, names = FALSE, totalNumCharacters = sum(nc))
     } else {
         #XXX this will be very slow
-        ans = replicate(len, { readInteger(con); readCharsxp(con, skipValue = skipValue, hdr = hdr)})
+        ans = replicate(len, { readInteger(con); readCharsxp(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L)})
     }
 
     if(hasAttr) {
@@ -475,13 +476,31 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
 readBCODESXP =
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
-    browser()
+    stop("BCODESXP in ", summary(con)$description)
+#    browser()
     len = readInteger(con)
     code = ReadItem(con, skipValue = skipValue, hdr = hdr, depth + 1L)
 
     len2 = readInteger()
 }
 
+
+readAltRepSXP =
+function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
+{
+    info = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L)
+    state = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L)
+    attr = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L)
+    if(skipValue) {
+        ans = defaultDesc("ALTREP_SXP")
+        addDescAttr(ans, attr)
+    } else {
+        warning("not restoring ALTREP_SXP for now. returning NULL.")
+        ans = NULL
+    }
+
+    ans
+}
 
 #########
 
@@ -506,7 +525,7 @@ function(con)
     unpackFlags(readInteger(con))
 
 readTag =
-function(con, hdr, info = NULL)
+function(con, hdr, info = NULL, depth = 0L)
 {
     if(is.null(info)) {
         flags = readInteger(con)
@@ -521,7 +540,7 @@ function(con, hdr, info = NULL)
 #Sanity check.  Leave for now.  Make assert() that we can disable as a no-op.
 if(unpackFlags(flags)["type"] != 9) recover()    
 
-    val = as.name(readCharsxp(con))
+    val = as.name(readCharsxp(con, depth = depth + 1L))
     addRef(val, hdr$references)
     val
 }
