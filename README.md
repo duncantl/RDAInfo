@@ -1,6 +1,6 @@
 ## Table of Contents of an R .rda File
 
-The purposse of this package are to be able to deal with large R data (rda) files
+The purposes of this package are to be able to deal with large R data (rda) files
 created via a call to save() **without loading**
 the R objects but 
 
@@ -9,7 +9,7 @@ the R objects but
 
 The following is an example of its use:
 ```r
-rda.file = system.file("sampleRDA/class_named_integer_logical_character_uncompress.rda", package = "RDAXDR")
+rda.file = system.file("sampleRDA/class_named_integer_logical_character_uncompress.rda", package = "RDAInfo")
 tc = toc(rda.file)
 ```
 ```
@@ -206,6 +206,18 @@ and will have to be garbage collected. (Nor has it summarized the variable types
 These two variations show the efficiency of factors in representing a large character vector with a small
 number of unique values.
 
+
+## 
+
+I (programmatically) scanned my drive for all .rda files. The largest of these contains a single
+object which is a list  with 785 elements.
+
+Loading the file takes 3.92 seconds. Reading the table of contents takes .054.
+
+This should have been an RDS file. The name did tell me what it contained - SmallSampleTrainDist.
+
+(A good point is: if this is the largest file you have, just load it to see what it contains; you
+get more information.  Well, I used to have much larger files!)
 
 
 ## Understanding the RDA XDR Stream

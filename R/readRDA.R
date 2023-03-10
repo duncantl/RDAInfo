@@ -15,7 +15,8 @@ function(file)
     header = readHeader(con)
 
     header$references = new.env(parent = emptyenv())
-    
+
+    browser()
     ans = ReadItem(con, TRUE, hdr = header, depth = 0L)
     attr(header$references, "locked") = TRUE
     
@@ -28,11 +29,10 @@ function(file)
 ReadItem =
     # hdr is the header from readHeader() to provide context for all of the operations,
     # specfically the native_encoding. And now the references container.
-function(con, skipValue = FALSE, hdr = NULL, depth = 0L)    
+function(con, skipValue = FALSE, hdr = NULL, depth = 0L,
+         ty = readInteger(con), elInfo = unpackFlags(ty))    
 {
-    ty = readInteger(con)
-    elInfo = unpackFlags(ty)
-print(unname(elInfo))
+cat("ReadItem:");print(unname(elInfo))
     
     sexpType = sexpType(elInfo["type"])
     switch(sexpType,
@@ -181,27 +181,50 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 
 
 readPairList =
+    #
+    # info is the c(type = 2, hasattr = , hastag = , ...)
+    #
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     ans = list()
     positions = numeric()
     ty = info
-    while(TRUE) {
-        pos = seek(con)
-        if(ty["hastag"]) {   # was info not ty
-            name = readTag(con, hdr = hdr, depth = depth + 1L)
-              # name is likely to be a name/symbol object, so need to coerce to character.
-            positions[as.character(name)] = pos
-        } else
-            name = length(ans) + 1L
 
-        value = ReadItem(con, skipValue, hdr, depth = depth + 1L)
+    ats = NULL
+    tags = character()
+    ndepth = depth + 1L
+    if(info['hasattr']) 
+        ats = readAttributes(con, skipValue = FALSE, hdr = hdr, depth = ndepth)
+    if(info['hastag'])
+        tags = as.character(readTag(con, hdr = hdr, depth = ndepth))
+    
+    #browser()
+    ctr = 1L
+    while(ctr < 3L) {
+        positions[ctr] = pos = seek(con)
+###       if(ty["hastag"]) { 
+###           name = readTag(con, hdr = hdr, depth = depth + 1L)
+###             # name is likely to be a name/symbol object, so need to coerce to character.
+###           positions[as.character(name)] = pos
+###       } else
+        name = length(ans) + 1L
+
+        value = ReadItem(con, skipValue, hdr, depth = depth + 1L) # have the type for the next element if length(ans) > 0. elInfo = ty)
         ans[[name]] = value
 
-        ty = readType(con)
-        if(ty["type"] == NILVALUE_SXP || ty["type"] == NILSXP)
+#        ty = readType(con)
+#  cat("readPairList: "); print(unname(ty))
+ #if(ty["type"] == 13L) browser()
+
+#        if(ty["type"] == NILVALUE_SXP || ty["type"] == NILSXP)
+        if(is.null(value))
             break
+        ctr = ctr + 1L
     }
+
+    if(!is.null(ats))
+        attributes(ans) = at
+
 
     if(depth == 0 && skipValue) {
         ans = mapply(function(d, p) { d$offset = p; d}, ans, positions, SIMPLIFY = FALSE)
@@ -215,6 +238,11 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
         else
             attributes(ans) = at
     }
+
+
+    names(ans)[1] = tags    
+# return(list(ans, tags = tags))  #   
+    
     ans
 }
 
@@ -380,7 +408,7 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
         #XXXX need to handle attributes on the character vector.
         return(readCharacterVector(con, len, skipValue = skipValue, hdr = hdr, depth = depth + 1L, hasAttr = info['hasattr'] > 0))
     }
-    
+  
     itemSize = switch(ty,
                       LGLSXP = 4L,
                       INTSXP = 4L,
@@ -488,7 +516,9 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 readAltRepSXP =
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
-    info = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L)
+    cat("AltRepSXP\n")
+    browser()
+    info = ReadItem(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)  # put skipValue back in?
     state = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L)
     attr = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L)
     if(skipValue) {
