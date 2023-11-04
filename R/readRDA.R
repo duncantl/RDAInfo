@@ -393,8 +393,8 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 {
     #XXX TEST with large vectors. (previously... may need to make this readLength() to deal with larger values.)
     len = readLENGTH(con) 
-
     ans = replicate(len, ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L), simplify = FALSE)
+
     at = NULL
     if(info["hasattr"] > 0) {
         at = readAttributes(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
@@ -414,13 +414,18 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 
             colInfo = ans
             ans = defaultDesc(sexpType(info['type']), length = len, class = class)
+
+            ans$names = list(at$names)
+            ans$elTypes = list(sapply(colInfo, `[[`, "type"))
+            
             if(!is.na(class) && "data.frame" %in% class) {
                 #XXX  call addDescAttrs() directly. Don't do this here.
-                ans$names = list(at$names)
                 ans$dim = list(c(colInfo[[1]]$length, len))
                 ans$hasRowNames = "row.names" %in% names(at) && length(at$row.names) > 0
-                ans$colInfo = list(sapply(colInfo, `[[`, "type"))
+            } else {
+                ans$elLengths = list(sapply(colInfo, function(x) x$length))
             }
+            
         }
         
         ans
