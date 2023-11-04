@@ -160,7 +160,7 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
         ans$enclos = enclos
         ans$frame = frame
         ans$length = length(hashtab)
-        ans$names  = names(hashtab)
+        ans$names  = list(names(hashtab))
         ans$allocatedLength = length(nonNull)
     } else {
         if(identical(enclos,  globalenv()))
