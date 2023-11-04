@@ -5,7 +5,7 @@ Load =
     # a subset of the variables, not all of them.
     # This avoids overwriting existing variables.
     #
-    # This does read and restore all of the variables in the Rda file and discards the ones you
+    # This does read and restore *all* of the variables in the Rda file and discards the ones you
     # don't want to keep.
     #
 function(file, envir = parent.frame(), verbose = FALSE, vars = character(), .noOverwrite = TRUE)
@@ -29,7 +29,6 @@ function(file, envir = parent.frame(), verbose = FALSE, vars = character(), .noO
         names(vars) = new.vars = vars
     else if(any(w <- (names(vars) == "")))
          new.vars[w] = vars[w]        
-    
     
     ok = mapply(doAssign, vars, new.vars, MoreArgs = list(from = e, to = envir, .noOverwrite = .noOverwrite))
     
