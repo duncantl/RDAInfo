@@ -1,3 +1,33 @@
++ 
+```
+rdas = list.files("../inst/sampleRDA", pattern = "\\.rda", full = TRUE)
+tmp = structure(lapply(rdas, function(x) try(toc(x))), names = rdas)
+err = sapply(tmp, inherits, 'try-error')
+table(err)
+```
+   + Currently errors for 2 of 32
+```
+[4] "../inst/sampleRDA/S4_MyClass.rda"              # attempting to put tag as names() element on empty ans list
+[5] "../inst/sampleRDA/trimws_function.rda"         # BCODESXP
+```
++ S4 - putting the tag on an empty ans in readPairList `names(ans)[name] = tag`
+
++ In addDescAttrs(), ignore values that have length 0.
+   + See "../inst/sampleRDA/dotsFunction.rda"            
+
++ In readEnvironment(), wrap the ans$names value in a list() since a data.frame with 1 row.
+
++ OBJSXP
+
++ regular list - 
+  + add the names
+  + the type of each element
+  + the length of each element?
+  + See inst/sampleRDA/list.rda
+
++ Do we want the attributes on an expression
+  + See inst/sampleRDA/Expression.rda and srcref, wholeref
+
 + 18 SEXP types remaining
 √ EXPRSXP = 	    20	    check
 
@@ -23,14 +53,49 @@ check  BUILTINSXP =    8
 √ SYMSXP
 
 
-+ factor() example.
 
 + BCODESXP
    + "~/OGS/SUForm/ProcessForm/June8.rda"
    
 + ALTREP_SXP
    + "~/OGS/COVID/WinterInstruction/AllCourses/AllCourses.rda"
-
+   + Problem in reading the second element - the state.
+     + This is a LISTSXP. We can read the first element - the character(264) vector and then
+       integer.
+	   + Then we get to another LISTSXP
+```
+sexp type = 2 depth = 0 hastag = 1 hasattr = 0
+sexp type = 1 depth = 1 hastag = 0 hasattr = 0
+sexp type = 9 depth = 2 hastag = 0 hasattr = 0
+sexp type = 238 depth = 1 hastag = 0 hasattr = 0
+sexp type = 2 depth = 2 hastag = 0 hasattr = 0
+sexp type = 1 depth = 3 hastag = 0 hasattr = 0
+sexp type = 9 depth = 4 hastag = 0 hasattr = 0
+sexp type = 2 depth = 2 hastag = 0 hasattr = 0
+sexp type = 1 depth = 3 hastag = 0 hasattr = 0
+sexp type = 9 depth = 4 hastag = 0 hasattr = 0
+sexp type = 2 depth = 2 hastag = 0 hasattr = 0
+sexp type = 13 depth = 3 hastag = 0 hasattr = 0
+sexp type = 254 depth = 2 hastag = 0 hasattr = 0
+sexp type = 2 depth = 2 hastag = 0 hasattr = 0
+sexp type = 16 depth = 3 hastag = 0 hasattr = 0
+sexp type = 9 depth = 4 hastag = 0 hasattr = 0
+   ....  repeated for 264 elements
+sexp type = 13 depth = 2 hastag = 0 hasattr = 0            <<<<<<<<<<<<<<<<
+sexp type = 2 depth = 2 hastag = 1 hasattr = 0             <<<<<<<<<<<<<<<<
+sexp type = 1 depth = 3 hastag = 0 hasattr = 0
+sexp type = 9 depth = 4 hastag = 0 hasattr = 0
+sexp type = 16 depth = 3 hastag = 0 hasattr = 0
+```
+   In the R code, this last entry does not have a tag. The value is simply 2.
+   So reading the next entry goes wrong.
+   This is the start of the readPairList
+   
+   + When we read the 13 as the next element of the state pair list after the character vector,
+      we have a ty of 13, but then call ReadItem which reads the type.  We already have the type.
+	  
+   
+   
 + NA for type
    + "~/Davis/ComputerUsage/jobs.rda"
    + type appears as 48.
@@ -40,7 +105,7 @@ check  BUILTINSXP =    8
 + Look at the .RData files
    + ~/OGS/PRCC/GTTP/.RData - seg faults.
 
-+ Problem Fles
++ Problem Files
   + "~/Personal/CV-orig/packageMetaInfo.rda"
      + result from file.info() x 2
   + √ "~/Personal/fbLogin.rda"
@@ -102,6 +167,13 @@ sapply(unclass(info), function(x) x$offset) # works
       + explore if this is something we can "fix" in R or is it a characteristic of gunzip.
   + We can read from the start to the offset and discard what we read just to get to the offset.
 
+
+## Check
+
++ √ factor() example.
+   + see toc("inst/sampleRDA/factor.rda")
+
+## Done (?)
 
 + √ References for ENVSXP.
 
