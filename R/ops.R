@@ -28,8 +28,6 @@ function(x, i, j, ...)
     readBin(con, 'raw', offset) 
 
     header = attr(x, "header")
-    # Read the tag
-    ReadItem(con, FALSE, hdr = header)
     # Read the value
     ReadItem(con, FALSE, hdr = header)
 }

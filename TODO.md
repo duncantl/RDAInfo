@@ -11,21 +11,9 @@ table(err)
 [5] "../inst/sampleRDA/trimws_function.rda"  # BCODESXP not implemented.
 ```
 
-+ o$d giving NULL for o = toc("../inst/sampleRDA/test.rda")
-  + but the tag for that element in [[.RDAToc has the actual value. So off by an element.
-  + are we recording the offset incorrectly for this element.
-  + works for o$mx
 
-+ For function/closxp object, record
-  + √ Was Returning a data.frame with a row for each parameter, for better or worse.
-     + srcref and offset repeated.
-	 + now back to one row and list() items for paramNames, hasDefaultValue, no repeats.
-	 + either approach works.
-  + √ # args
-  + √ has ...
-  + √ names of parameters
-  + length of body?
-     + would have to change ReadItem for this object to collect the number of expressions or 
++ length of body for a function??
+  + would have to change ReadItem for this object to collect the number of expressions or 
 	    we can set skipValue = FALSE and reconstruct the body.
 
 + Do we want the attributes on an expression
@@ -98,30 +86,33 @@ sexp type = 16 depth = 3 hastag = 0 hasattr = 0
 	  
 + NA for type - of what readType()?
    + "~/Davis/ComputerUsage/jobs.rda"
+   + Note  `In readHeader(con) : RDA format is version 2`. So different RDA format.
    + type appears as 48.
       + Run this via LLDB and our output of the sexp type, depth, hastag, hasattr.
 	     + want this to be stored in memory or written to a file. It is over 100K lines.
 
 + Look at the .RData files
    + ~/OGS/PRCC/GTTP/.RData - seg faults.
-   + Is this a different RDA format?
+   + A large vector whose length we get as a shorter integer and so is wrong.
+   + Seg faulting in R_eatCharVectorElements
+   + X Is this a different RDA format? NO
    
 + Problem Files
   + "~/Personal/CV-orig/packageMetaInfo.rda"
      + result from file.info() x 2
-  + √ "~/Personal/fbLogin.rda"
+  + "~/Personal/fbLogin.rda"
+     + give error for names(ans)[name] = tag in readPairList()
 
 
-+ √ Find all functions that have a depth parameter and find all calls to those functions that don't include the depth.
++ √ Find all functions in this package's code that have a depth parameter and 
+     find all calls to those functions that don't include the depth.
    + see depthArg.R
-   
    
 + TEST SUITE - create
 
 + References at the toplevel
    + save(a = obj,  b = obj) - same object.
    + capture concept that restoring b means binding to the value of a.
-
 
 
 + [test] Capture the references.
@@ -167,7 +158,7 @@ sapply(unclass(info), function(x) x$offset) # works
       + https://stackoverflow.com/questions/30834963/seeking-on-a-gz-connection-is-unpredictable
       + explore if this is something we can "fix" in R or is it a characteristic of gunzip.
   + We can read from the start to the offset and discard what we read just to get to the offset.
-
+      + using more memory than we should and need but will work around problem.
 
 ## Check
 
@@ -181,6 +172,11 @@ sapply(unclass(info), function(x) x$offset) # works
 
 ## Verify
 
++ √ o$d giving NULL for o = toc("../inst/sampleRDA/test.rda")
+  + but the tag for that element in [[.RDAToc has the actual value. So off by an element.
+  + are we recording the offset incorrectly for this element.
+  + was getting all the remaining elements after this object.
+
 + √ factor() example.
    + see toc("inst/sampleRDA/factor.rda")
 
@@ -192,6 +188,15 @@ sapply(unclass(info), function(x) x$offset) # works
 ```
 o = toc("inst/sampleRDA/list.rda")
 ```
+
++ For function/closxp object, record
+  + √ Was Returning a data.frame with a row for each parameter, for better or worse.
+     + srcref and offset repeated.
+	 + now back to one row and list() items for paramNames, hasDefaultValue, no repeats.
+	 + either approach works.
+  + √ # args
+  + √ has ...
+  + √ names of parameters
 
 ## Done (?)
 
