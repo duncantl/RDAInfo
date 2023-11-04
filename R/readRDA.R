@@ -16,7 +16,6 @@ function(file)
 
     header$references = new.env(parent = emptyenv())
 
-    browser()
     ans = ReadItem(con, TRUE, hdr = header, depth = 0L)
     attr(header$references, "locked") = TRUE
     
