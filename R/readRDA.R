@@ -314,13 +314,18 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     if(info['hasattr'])
         at = readAttributes(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
 
-
     env = ReadItem(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
     formals = ReadItem(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
     body = ReadItem(con, skipValue, hdr = hdr, depth = depth + 1L)
 
     if(skipValue) {
         ans = defaultDesc("CLOSXP", numParams = length(formals))
+        # If we add hasDotsParam, paramNames and hasDefaultValue in call to defaultDesc()
+        # we get as many rows as there are parameters.
+        ans$hasDotsParam = "..." %in% names(formals)
+        ans$paramNames = list(names(formals))
+        ans$hasDefaultValue = list(sapply(formals, hasDefaultValue))
+        
         if(!is.null(at)) 
             ans = addDescAttrs(ans, at)
     } else {
@@ -333,6 +338,15 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     
     ans
 }
+
+hasDefaultValue =
+function(x)
+{
+  return( class(x) != "MISSINGARG_SXP") 
+
+  # !(is.name(x) && as.character(x) == "")
+}
+
 
 mkFormals =
 function(parms, fun = function(){})
