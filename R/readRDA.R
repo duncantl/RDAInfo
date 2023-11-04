@@ -186,23 +186,32 @@ readPairList =
     #
     # info is the c(type = 2, hasattr = , hastag = , ...)
     #
+    # This is the iterative (rather than recursive) version.
+    #
+    # info is the result of readType() that identifies the LISTSXP for the pair list.
+    # 
+    #
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     ans = list()
     positions = numeric()
     ty = info
 
-    ats = NULL
+    ats = NULL  # attributes on the pair list itself.
     tags = character()
     ndepth = depth + 1L
     if(info['hasattr']) 
         ats = readAttributes(con, skipValue = FALSE, hdr = hdr, depth = ndepth)
-    if(info['hastag'])
-        tags = as.character(readTag(con, hdr = hdr, depth = ndepth))
     
-    #browser()
     ctr = 1L
-    while(ctr < 3L) {
+    while(TRUE) {
+
+        tag = character()
+        if(info['hastag'])
+            tag = as.character(readTag(con, hdr = hdr, depth = ndepth))        
+    
+#if(depth == 0) browser()
+
         positions[ctr] = pos = seek(con)
 ###       if(ty["hastag"]) { 
 ###           name = readTag(con, hdr = hdr, depth = depth + 1L)
@@ -213,14 +222,19 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 
         value = ReadItem(con, skipValue, hdr, depth = depth + 1L) # have the type for the next element if length(ans) > 0. elInfo = ty)
         ans[[name]] = value
+        if(length(tag) > 0)
+            names(ans)[name] = tag
 
-#        ty = readType(con)
+        ty = readType(con)
 #  cat("readPairList: "); print(unname(ty))
  #if(ty["type"] == 13L) browser()
 
-#        if(ty["type"] == NILVALUE_SXP || ty["type"] == NILSXP)
+        if(ty["type"] == NILVALUE_SXP || ty["type"] == NILSXP)
+            break
+        #XXX remove this.
         if(is.null(value))
             break
+        info = ty
         ctr = ctr + 1L
     }
 
@@ -241,9 +255,8 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
             attributes(ans) = at
     }
 
-
-    names(ans)[1] = tags    
-# return(list(ans, tags = tags))  #   
+#XX check if we need to do something with names or did we get them one element at a time.
+#    names(ans)[1] = tags    
     
     ans
 }
@@ -364,7 +377,8 @@ function(con)
 readList =
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
-    len = readLENGTH(con)      #XXX TEST with large vectors. (previously... may need to make this readLength() to deal with larger values.)
+    #XXX TEST with large vectors. (previously... may need to make this readLength() to deal with larger values.)
+    len = readLENGTH(con) 
 
     ans = replicate(len, ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L), simplify = FALSE)
     at = NULL
