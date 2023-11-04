@@ -31,7 +31,7 @@ ReadItem =
 function(con, skipValue = FALSE, hdr = NULL, depth = 0L,
          ty = readInteger(con), elInfo = unpackFlags(ty))    
 {
-cat("ReadItem:");print(unname(elInfo))
+# cat("ReadItem:");print(unname(elInfo))
     
     sexpType = sexpType(elInfo["type"])
     switch(sexpType,
