@@ -34,7 +34,6 @@ Load(file, envir = parent.frame(), verbose = FALSE, vars = character(), .noOverw
     any names on this vector specify the target variables in \code{envir} to which they will be assigned.
   }
 %  \item{\dots}{ name=value pairs which   allows the  caller to specify \code{vars} without the \code{c()}.  May be removed}
-}
   \item{.noOverwrite}{a logical value that controls whether to overwrite any existing variables in
   \code{envir}.}
 }
