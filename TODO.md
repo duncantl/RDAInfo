@@ -1,4 +1,4 @@
-+ 
++ Check examples
 ```
 rdas = list.files("../inst/sampleRDA", pattern = "\\.rda", full = TRUE)
 tmp = structure(lapply(rdas, function(x) try(toc(x))), names = rdas)
@@ -7,54 +7,56 @@ table(err)
 ```
    + Currently errors for 2 of 32
 ```
-[4] "../inst/sampleRDA/S4_MyClass.rda"              # attempting to put tag as names() element on empty ans list
-[5] "../inst/sampleRDA/trimws_function.rda"         # BCODESXP
+[4] "../inst/sampleRDA/S4_MyClass.rda"       # attempting to put tag as names() element on empty ans list
+[5] "../inst/sampleRDA/trimws_function.rda"  # BCODESXP not implemented.
 ```
-+ S4 - putting the tag on an empty ans in readPairList `names(ans)[name] = tag`
 
-+ In addDescAttrs(), ignore values that have length 0.
-   + See "../inst/sampleRDA/dotsFunction.rda"            
++ o$d giving NULL for o = toc("../inst/sampleRDA/test.rda")
+  + but the tag for that element in [[.RDAToc has the actual value. So off by an element.
+  + are we recording the offset incorrectly for this element.
+  + works for o$mx
 
-+ In readEnvironment(), wrap the ans$names value in a list() since a data.frame with 1 row.
-
-+ OBJSXP
-
-+ regular list - 
-  + add the names
-  + the type of each element
-  + the length of each element?
-  + See inst/sampleRDA/list.rda
++ For function/closxp object, record
+  + √ Was Returning a data.frame with a row for each parameter, for better or worse.
+     + srcref and offset repeated.
+	 + now back to one row and list() items for paramNames, hasDefaultValue, no repeats.
+	 + either approach works.
+  + √ # args
+  + √ has ...
+  + √ names of parameters
+  + length of body?
+     + would have to change ReadItem for this object to collect the number of expressions or 
+	    we can set skipValue = FALSE and reconstruct the body.
 
 + Do we want the attributes on an expression
   + See inst/sampleRDA/Expression.rda and srcref, wholeref
 
++ Do we want the srcref for functions?
+
 + 18 SEXP types remaining
-√ EXPRSXP = 	    20	    check
+  + √ EXPRSXP = 	    20	    check
+  +  BCODESXP =     21    
+  + S4SXP =        25    
+  + check SPECIALSXP =    7	  
+  + check  BUILTINSXP =    8	  
+  + CLOSXP = 	     3	  
+  + PROMSXP = 	     5	  
+  + DOTSXP = 	    17	  
+  + ANYSXP = 	    18	    shouldn't see these
+  + WEAKREFSXP =   23    
+  + NEWSXP =       30    
+  + FREESXP =      31    
+  + FUNSXP =       99    
 
- BCODESXP =     21    
- S4SXP =        25    
- 
-check SPECIALSXP =    7	  
-check  BUILTINSXP =    8	  
+  + √ VECSXP = 	    19	  
+  + √ LANGSXP = 	     6	  
+  + √ ENVSXP = 	     4	  
+  + √ SYMSXP
 
- CLOSXP = 	     3	  
-
- PROMSXP = 	     5	  
- DOTSXP = 	    17	  
- ANYSXP = 	    18	    shouldn't see these
- WEAKREFSXP =   23    
- NEWSXP =       30    
- FREESXP =      31    
- FUNSXP =       99    
-
-√ VECSXP = 	    19	  
-√ LANGSXP = 	     6	  
-√ ENVSXP = 	     4	  
-√ SYMSXP
-
-
++ Change in R-devel for OBJSXP and not S4SXP
 
 + BCODESXP
+   + "inst/sampleRDA/trimws_function.rda"
    + "~/OGS/SUForm/ProcessForm/June8.rda"
    
 + ALTREP_SXP
@@ -94,9 +96,7 @@ sexp type = 16 depth = 3 hastag = 0 hasattr = 0
    + When we read the 13 as the next element of the state pair list after the character vector,
       we have a ty of 13, but then call ReadItem which reads the type.  We already have the type.
 	  
-   
-   
-+ NA for type
++ NA for type - of what readType()?
    + "~/Davis/ComputerUsage/jobs.rda"
    + type appears as 48.
       + Run this via LLDB and our output of the sexp type, depth, hastag, hasattr.
@@ -104,7 +104,8 @@ sexp type = 16 depth = 3 hastag = 0 hasattr = 0
 
 + Look at the .RData files
    + ~/OGS/PRCC/GTTP/.RData - seg faults.
-
+   + Is this a different RDA format?
+   
 + Problem Files
   + "~/Personal/CV-orig/packageMetaInfo.rda"
      + result from file.info() x 2
@@ -170,8 +171,27 @@ sapply(unclass(info), function(x) x$offset) # works
 
 ## Check
 
++ √ S4 - putting the tag on an empty ans in readPairList `names(ans)[name] = tag`
+
++ √ In addDescAttrs(), ignore values that have length 0.
+   + See "../inst/sampleRDA/dotsFunction.rda"            
+
++ √ In readEnvironment(), wrap the ans$names value in a list() since a data.frame with 1 row.
+
+
+## Verify
+
 + √ factor() example.
    + see toc("inst/sampleRDA/factor.rda")
+
++ √ regular list objects 
+  + √ add the names of the elements
+  + √ the type of each element
+  + √ the length of each element?
+  + 
+```
+o = toc("inst/sampleRDA/list.rda")
+```
 
 ## Done (?)
 
