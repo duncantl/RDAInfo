@@ -181,7 +181,6 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     ans
 }
 
-
 readPairList =
     #
     # info is the c(type = 2, hasattr = , hastag = , ...)
@@ -200,6 +199,7 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     ats = NULL  # attributes on the pair list itself.
     tags = character()
     ndepth = depth + 1L
+
     if(info['hasattr']) 
         ats = readAttributes(con, skipValue = FALSE, hdr = hdr, depth = ndepth)
     
