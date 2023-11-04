@@ -117,8 +117,11 @@ function(desc, at, all = TRUE)
         if(!all(w <- (names(at) %in% c("names", "class")))) {
             if(all) {
                 vars = names(at)[!w]
-                for(i in vars)
-                    desc[[i]] = if(length(at[[i]]) > 1) list(at[[i]]) else at[[i]]
+                for(i in vars) {
+                    if(length(at[[i]]) > 0)
+                        desc[[i]] = if(length(at[[i]]) > 1) list(at[[i]]) else at[[i]]
+                }
+                
             } else
                 warning("ignoring attribute names on vector: ", paste(names(at)[!w], collapse = ", "))
         }
