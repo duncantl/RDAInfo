@@ -1,0 +1,33 @@
+~/R_SelectiveLoad/build/bin/R -d lldb
+
+
+R
+load("~/R_SelectiveLoad/build/sample.x.y.rda")
+# force the lazy loading of R functions in base.
+
+
+break set -f serialize.c -l 1790
+# In ReadItem but just at the switch
+
+breakpoint command add -s python 1
+global ReadItemInfo
+type = frame.FindVariable("type").GetValue()
+depth = frame.GetModule().FindFirstGlobalVariable(frame.thread.process.target, "R_ReadItemDepth").GetValue()
+ReadItemInfo.append( [type, depth, frame.FindVariable("hastag").GetValue(), frame.FindVariable("hasattr").GetValue()])
+thread = frame.GetThread()
+process = thread.GetProcess()
+process.Continue()
+DONE
+
+script import utils
+script ReadItemInfo = []
+
+load("~/R_SelectiveLoad/build/sample.x.y.rda")
+
+script utils.func(ReadItemInfo)
+
+
+In another R process
+
+source("utils.R")
+func()
