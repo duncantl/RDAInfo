@@ -11,25 +11,26 @@ tmp = structure(lapply(rdas, function(x) try(toc(x))), names = rdas)
 err = sapply(tmp, inherits, 'try-error')
 table(err)
 ```
-   + Currently errors for 2 of 32
+   + Currently errors for 1 of 32
 ```
-[4] "../inst/sampleRDA/S4_MyClass.rda"       # readS4 is not implemented.
 [5] "../inst/sampleRDA/trimws_function.rda"  # BCODESXP not implemented.
 ```
 
 1. 18 SEXP types remaining
   +  BCODESXP =     21    
-  + S4SXP =        25    
+  + √ S4SXP =        25    
   + check SPECIALSXP =    7	  
   + check  BUILTINSXP =    8	  
-  + CLOSXP = 	     3	  
+  + √ CLOSXP = 	     3	  
   + PROMSXP = 	     5	  
   + DOTSXP = 	    17	  
-  + ANYSXP = 	    18	    shouldn't see these
   + WEAKREFSXP =   23    
-  + NEWSXP =       30    
-  + FREESXP =      31    
-  + FUNSXP =       99    
+
+  + Not mentioned in serialize.c
+     + X ANYSXP = 	    18	    shouldn't see these
+     + X NEWSXP =       30    
+     + X FREESXP =      31    
+     + X FUNSXP =       99    
 
   + √ EXPRSXP = 	    20	    check
   + √ VECSXP = 	    19	  
@@ -92,10 +93,6 @@ sexp type = 16 depth = 3 hastag = 0 hasattr = 0
    + The note in serialize.c "  strings without an encoding flag will be converted to the current native  encoding" indicates that the CHARSXP?/STRSXP may contain an encoding instruction.
    + See ReadChar in serialize.c.  The encoding is in the levs flag.
 
-1. Example objects to test.
-   + √ CLOSXP with no default values, attributes, ...
-   + √ calls with missing arguments - "../inst/sampleRDA/call_missing_arg.rda"
-
 1. get file name from the connection
    + summary(con)$description
    + add it to the RDAToc object returned by toc() if we start with a connection.
@@ -135,7 +132,7 @@ sapply(unclass(info), function(x) x$offset) # works
      and save() each of them. Then toc() each of the rda files.
 	    + fails for j - same error.  See j_jobs.rda
 		+ okay but very slow for k  (5.6 seconds and k is a 39573 x 15 data.frame with 12 character
-          vectors, 1 factor, 1 list (of character vectors) and 1 POSXIXlt (not ct) columns)
+          vectors, 1 factor, 1 list (of character vectors) and 1 POSIXlt (not ct) columns)
 
 + Look at the .RData files
    + ~/OGS/PRCC/GTTP/.RData - seg faults.
@@ -210,15 +207,20 @@ o = toc("inst/sampleRDA/list.rda")
   + √ names of parameters
 
 
-+ √ Test
-   + EXTPTRSXP =    22    ,
-      + with attributes - not supposed to put them on the externalptr itself, but legal.
++ EXTPTRSXP =    22  
+      + √ fixed - with attributes - not supposed to put them on the externalptr itself, but legal.
          + `z = toc("inst/sampleRDA/externalpointer_withAttrs.rda")`
          + finishes the file but has 2 entries.
 		 + load() has ptr with an attribute named bob with a value of 1
 		 + toc() gives 2 elements
       + had to look at serialize.c to see what should happen.
 	     + read attributes after the switch() for many types.
+
+1. Example objects to test.
+   + √ CLOSXP with no default values, attributes, ...
+   + √ calls with missing arguments - "../inst/sampleRDA/call_missing_arg.rda"
+
+
 
 ## Validate Package Code
 
