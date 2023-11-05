@@ -307,6 +307,8 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 
 readFunction =
     #  See serialize.c::1135
+    # Note that the attributes are first.
+    #
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     # info says there is a tag . serialize for the output explicitly sets this.   What does this mean???????
@@ -574,22 +576,41 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 {
     prot = ReadItem(con, skipValue, hdr, depth + 1L)
     tag = ReadItem(con, skipValue, hdr, depth + 1L)    
-    
-    # ???? attributes. Should be on the externalptr.
-    if(skipValue)
-        defaultDesc("EXTPTRSXP")
-    else {
-      ans = new("externalptr")
+
+    # attributes. Should be on the externalptr.    
+    ats = NULL
+    if(info["hasattr"])
+        ats = ReadItem(con, TRUE, hdr = hdr, depth = depth + 1L)
+    if(skipValue) {
+        ans = defaultDesc("EXTPTRSXP")
+        if(length(ats)) {
+            ans$attrNames = list(names(ats))
+            ans$attrLengths = list(sapply(ats, function(x) x$length))
+        }
+    } else {
+        ans = new("externalptr")
+        if(length(ats))
+            attributes(ans) = c(ats, attributes(ans))        
     }
+
+    
+    ans
 }
 
 #################
 
 readType =
+    #
+    # Read the type of the next object and decompose the number into
+    # different the flags describing the object.
+    #
 function(con)    
     unpackFlags(readInteger(con))
 
 readTag =
+    #
+    # read a TAG/name/symbol as an element of a pairlist
+    #
 function(con, hdr, info = NULL, depth = 0L)
 {
     if(is.null(info)) {
@@ -641,8 +662,8 @@ function(con, nel = 1L)
 }
 
 IS_OBJECT_BIT_MASK =   bitShiftL(1, 8)
-HAS_ATTR_BIT_MASK =    bitShiftL(1, 9)
-HAS_TAG_BIT_MASK =     bitShiftL(1, 10)
+HAS_ATTR_BIT_MASK  =   bitShiftL(1, 9)
+HAS_TAG_BIT_MASK   =   bitShiftL(1, 10)
 
 
 unpackFlags =
@@ -659,6 +680,9 @@ function(val)
 
 
 readHeader =
+    #
+    # Read the header of the RDA file.
+    #
 function(con)    
 {
     if(is.character(con)) {
@@ -672,7 +696,6 @@ function(con)
     format = trimws(rawToChar(format))
     if(format != "X")
         stop("not XDR format")
-
 
     info = list(format = format)
     
@@ -694,7 +717,7 @@ function(con)
 
 decodeVersion =
     #
-    # See DecodeVersion in serialize.c
+    # See DecodeVersion in serialize.c (#2160)
     #
     # SO for % as bit operation.
     #  https://stackoverflow.com/questions/3072665/bitwise-and-in-place-of-modulus-operator
