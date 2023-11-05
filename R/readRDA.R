@@ -82,9 +82,33 @@ function(con, elInfo, hdr, depth = 0L)
 readS4 =    
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
- browser()
+    ats = NULL
+    if(info["hasattr"])
+        ats = ReadItem(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
 
+    if(!skipValue)
+        return(mkS4Object(ats))
+    
+    if(length(ats)) {
+            ans = defaultDesc("S4SXP", class = as.character(ats$class), package = attr(ats$class, "package"))
+            ans$slotNames = list(setdiff(names(ats), "class"))
+    } else
+        ans = defaultDesc("S4SXP")
+    
+    ans
 }
+
+mkS4Object =
+function(ats)
+{
+    ans = new(ats$class)
+    slots = slotNames(ans)
+    for(i in slots) {
+        slot(ans, i) = ats[[ i ]]
+    }
+    ans
+}
+
     
 ############
 
