@@ -1,8 +1,7 @@
 ## Table of Contents of an R .rda File
 
 The purposes of this package are to be able to deal with large R data (rda) files
-created via a call to save() **without loading**
-the R objects but 
+created via a call to save() **without loading** the R objects but 
 
 + providing a description of the top-level variables it contains without restoring the objects,
 + allowing deserializing one or a subset of the variables without restoring the others
@@ -32,6 +31,7 @@ tc$let
 ```
 
 And similarly,  `tc[ c("l", "let") ]` or `tc[ c(2, 3) ]`
+
 
 
 
@@ -71,11 +71,11 @@ We have the offset in the file at which each of the objects starts.
 
 ## Marginally improved load()
 
-load with an option to only assign a subset would be a minor help in not overwriting existing variables
+load with an option to only assign a subset is a minor help in not overwriting existing variables
 ```r
 Load('filename.rda', vars = c('a', 'b'))
 ```
-This would restore all the variables in the Rda file into a new environment and then 
+This restores all the variables in the Rda file into a new environment and then 
 assign those in vars to the target `envir`.
 This just avoids the caller having to create the new environment and then assigning this subset of
 variables. It does allow us to map the variable names to something different, e.g.,
@@ -122,10 +122,10 @@ There are however several motivations:
 2. This package does provide 2 simple routines to deal with XDR int and double values which is
    functionality that doesn't appear to be in any CRAN package.
 
-
 In other words, this is an R prototype of something we might consider implementing in C, and
 specifically, adapting the code in serialize.c (and saveload.c) in the R source.
 It is not intended to be a production-level solution that will work best in all cases. 
+
 √ We did ~~may well~~ implement the most significant bottleneck in C, that is reading large
 character vectors. This nows makes the R implementation faster than load()'ing all the objects, at
 least for cases of a collection of large vectors.
@@ -136,15 +136,15 @@ helping people learn to experiment with and contribute to the R source code.
 
 
 ## Current Status
-While we wrote this only today and haven't tested it much, this currently
+While we wrote this only today and have now updated it a little, and we haven't tested it much, this currently
 + Reads 
    + all vectors, matrices, lists, data.frames
    + attributes
-
-+ Does not YET handle
    + functions
    + language objects generally
-   + Environments
+   + environments
+
++ Does not YET handle
    + S4 objects
    + Byte code
 
@@ -152,8 +152,7 @@ While we wrote this only today and haven't tested it much, this currently
 ##  Performance
 
 
-
-## For an RDA file with 4 variables, each of length 1e7 (but separate variables)
+### For an RDA file with 4 variables, each of length 1e7 (but separate variables)
 
 Contents of the RDA file are 4 vectors, each of length 1e7
 
@@ -197,17 +196,16 @@ On a Macbook Pro (32Gb RAM)
 + Table of Contents: 1.8 seconds 
 + Speedup factor:  2.0
 
-(Medians over 5 runs, elapsed time)
+(Medians over 5 runs, elapsed time.)
 
 This doesn't take into account that the `load()` version has used a significant amount of memory
 and will have to be garbage collected. (Nor has it summarized the variable types.)
-
 
 These two variations show the efficiency of factors in representing a large character vector with a small
 number of unique values.
 
 
-## 
+### 
 
 I (programmatically) scanned my drive for all .rda files. The largest of these contains a single
 object which is a list  with 785 elements.
