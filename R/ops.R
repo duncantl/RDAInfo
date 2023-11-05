@@ -42,10 +42,7 @@ function(x, ...)
     # message or cat??
     message("file: ", attr(x, "file"))
     message("encoding: ", attr(x, "header")$native_encoding, "\n")
-    if(length(x) == 1)
-        print(unclass(x)[[1]])
-    else
-        print(as.data.frame(x))
+    print(as.data.frame(x))
 }
 
 as.data.frame.RDAToc =
