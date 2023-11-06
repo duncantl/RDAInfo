@@ -122,18 +122,6 @@ sapply(unclass(info), function(x) x$offset) # works
 
 ## Problem Files
 
-+ NA for type - of what readType()?
-   + "~/Davis/ComputerUsage/jobs.rda"
-   +  now j_jobs.rda
-   + type appears as 48.
-      + Run this via LLDB and our output of the sexp type, depth, hastag, hasattr.
-	     + want this to be stored in memory or written to a file. It is over 100K lines.
-   + Read jobs.rda into R via lload(), then assign each of the two elements (j and k) to variables
-     and save() each of them. Then toc() each of the rda files.
-	    + fails for j - same error.  See j_jobs.rda
-		+ okay but very slow for k  (5.6 seconds and k is a 39573 x 15 data.frame with 12 character
-          vectors, 1 factor, 1 list (of character vectors) and 1 POSIXlt (not ct) columns)
-
 + Look at the .RData files
    + ~/OGS/PRCC/GTTP/.RData - seg faults.
    + ¿ A large vector whose length we get as a shorter integer and so is wrong.
@@ -142,14 +130,6 @@ sapply(unclass(info), function(x) x$offset) # works
    + The file is 38734 bytes
    + The totalChars at the segfault is 113744 and so is nchars
    + The .RData conains 11 functions which capture the R_GlobalEnv.
-
-   
-+ "~/Personal/CV-orig/packageMetaInfo.rda"
-     + result from file.info() x 2 (??)
-
-+ "~/Personal/fbLogin.rda"
-     + give error for `names(ans)[name] = tag` in readPairList()
-     + same error as for S4 file above but not necessarily related.
 
 
 ## Extra Information
