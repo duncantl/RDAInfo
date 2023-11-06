@@ -30,7 +30,10 @@ toc(file)
   characteristics described for different types.
 
   The individual data.frames can be combined with the as.data.frame
-  method
+  method.
+
+  One can access an element via the RDAToc object to extract the individual
+  element from the RDA file.
 }
 \references{
   R Internals manual
