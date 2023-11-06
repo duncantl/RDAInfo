@@ -11,4 +11,8 @@ export(Load)
 
 
 # For utils.R
-export(sexpType)
+# export(sexpType)
+
+export(rdaHeader)
+export(loadObjs)
+

@@ -703,7 +703,7 @@ function(val)
       hastag = bitAnd(val, HAS_TAG_BIT_MASK))
 
 
-readHeader =
+rdaHeader = readHeader =
     #
     # Read the header of the RDA file.
     #
