@@ -8,3 +8,7 @@ S3method("print", "RDAToc")
 S3method("as.data.frame", "RDAToc")
 
 export(Load)
+
+
+# For utils.R
+export(sexpType)
