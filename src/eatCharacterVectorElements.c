@@ -5,6 +5,7 @@
 #include <rpc/xdr.h>
 
 
+#define MIN(a, b) ((a) < (b)) ? (a) : (b)
 SEXP
 R_eatCharVectorElements(SEXP rConn, SEXP r_nels)
 {
@@ -13,6 +14,7 @@ R_eatCharVectorElements(SEXP rConn, SEXP r_nels)
     char ibuf[4];
     char strBuf[10000];
     int nchars;
+    size_t bufSize = sizeof(strBuf)/sizeof(strBuf[0]);
 
     int totalChars = 0;
 
@@ -26,10 +28,17 @@ R_eatCharVectorElements(SEXP rConn, SEXP r_nels)
 		error(("XDR read failed for integer/int"));
 
 	// if nchars = -1, then NA_character_
-	if(nchars != -1) { 
+	if(nchars != -1) {
+	    
 	    totalChars += nchars;
-	    // want seek here rather than read.
-	    R_ReadConnection(con, strBuf, nchars);
+	    int num = 0;
+	    int nc = 0;
+	    while(num < nchars) {
+		nc = MIN(bufSize, nchars - num);
+		// want seek here rather than read.
+		R_ReadConnection(con, strBuf, nc);
+		num += nc;
+	    }
 	    //con->seek(con, 2, 1)
 	}
     }
