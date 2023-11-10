@@ -34,6 +34,8 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L,
 # cat("ReadItem:");print(unname(elInfo))
     
     sexpType = sexpType(elInfo["type"])
+#print(elInfo)
+#if(depth == 0) browser()    
     switch(sexpType,
            LISTSXP = readPairList(con, elInfo, skipValue, hdr, depth = depth),
            LGLSXP =,
@@ -231,9 +233,14 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     while(TRUE) {
 
         tag = character()
-        if(info['hastag'])
-            tag = as.character(readTag(con, hdr = hdr, depth = ndepth))        
-    
+        if(info['hastag'])  {
+            tag = as.character(readTag(con, hdr = hdr, depth = ndepth))
+            if(tag == "tt")
+                browser()
+        }
+        
+
+        
 #if(depth == 0) browser()
 
         positions[ctr] = pos = seek(con)
@@ -480,22 +487,13 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     ans = if(skipValue) {
               if(ty == "STRSXP")  # Isn't this handled above???
                   readCharacterVector(con, len, skipValue, hdr = hdr, depth = depth + 1L, hasAttr = info['hasattr'] > 0)
-              else 
-                  seek(con, len * itemSize, origin = "current")
+              else
+                  readVectorValues(ty, con, len, itemSize)
+                  # seek(con, len * itemSize, origin = "current")
 
               data.frame(type = ty, length = len, class = NA, names = FALSE)
           } else {
-              buf = readBin(con, 'raw', len * itemSize)
-              if(ty == "CPLXSXP") {
-                  tmp = .Call("xdr_numeric", buf, len*2L)
-                  i = seq(1, length = len, by = 2)
-                  complex(real = tmp[i], imaginary = tmp[i+1L])
-              } else
-                  switch(ty,
-                         LGLSXP = as.logical(.Call("xdr_integer", buf)),
-                         INTSXP = .Call("xdr_integer", buf),
-                         REALSXP = .Call("xdr_numeric", buf, len),
-                         RAWSXP = buf)
+              readVectorValues(ty, con, len, itemSize)
           }
 
     if(info['hasattr'] > 0) {
@@ -509,6 +507,23 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     
     ans
 }
+
+readVectorValues =
+function(ty, con, len, itemSize)
+{
+    buf = readBin(con, 'raw', len * itemSize)
+    if(ty == "CPLXSXP") {
+        tmp = .Call("xdr_numeric", buf, len*2L)
+        i = seq(1, length = len, by = 2)
+        complex(real = tmp[i], imaginary = tmp[i+1L])
+    } else
+        switch(ty,
+               LGLSXP = as.logical(.Call("xdr_integer", buf)),
+               INTSXP = .Call("xdr_integer", buf),
+               REALSXP = .Call("xdr_numeric", buf, len),
+               RAWSXP = buf)
+}
+
 
 readCharacterVector =
 function(con, len, skipValue = FALSE, hdr = NULL, depth = 0L, hasAttr = FALSE)    
@@ -563,22 +578,94 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L)
 ############
 
 readBCODESXP =
+    #
+    # In ReadItem
+    #   PROTECT(s = ReadBC(ref_table, stream));
+    #          InInteger()
+    #          ReadBC1()
+    #   SETLEVELS - but doesn't read
+    #   SET_ATTRIB(  hasAttr ?  ReadItem() )
+    #   R_BCVersionOK(s) & R_BytecodeExpr(s) - don't read
+    # 
+    #
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
-    stop("BCODESXP in ", summary(con)$description)
-#    browser()
+    # ReadBC
     len = readInteger(con)
-    code = ReadItem(con, skipValue = skipValue, hdr = hdr, depth + 1L)
 
-    len2 = readInteger()
+    # if has attributes, read them
+    ats = NULL
+    if(info["hasattr"])
+        ats = ReadItem(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)
+
+    # ReadBC1 - code
+    readBC1(con, skipValue, hdr, depth)
+
+    #XX return a value,
+    defaultDesc("BCODESXP")
 }
 
+readBC1 =
+function(con, skipValue, hdr, depth)
+{
+    s = ReadItem(con, skipValue = TRUE, hdr = hdr, depth = depth + 1L)
+    readBCConstants(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L)    
+}
+
+readBCConstants =
+function(con, skipValue, hdr, depth)
+{
+    num = readInteger(con)
+    for(i in seq_len( num ) ) {
+        type = readInteger(con)
+        if(type == BCODESXP) {
+            # ReadBC1
+            readBC1(con, skipValue, hdr, depth + 1L)
+            # u1 = ReadItem(con, skipValue, hdr = hdr, depth = depth + 1L)
+            # const = readBCConstants(con, skipValue, hdr, depth = depth + 1L)
+        } else if(type %in% c(LANGSXP, LISTSXP, BCREPDEF, BCREPREF, ATTRLANGSXP, ATTRLISTSXP)) {
+            # ReadBCLang
+            readBCLang(type, skipValue, con, hdr, depth = depth + 1L)
+        } else {
+            ReadItem(con, skipValue, hdr = hdr, depth = depth + 1L)
+        }
+    }
+    NULL
+}
+
+readBCLang =
+function(type, skipValue, con, hdr, depth)
+{
+    if(type == BCREPREF) {
+        readInteger(con)
+    } else if(type %in% c(BCREPDEF, LANGSXP, LISTSXP, ATTRLANGSXP, ATTRLISTSXP)) {
+        if(type == BCREPDEF) {
+            pos = readInteger(con)
+            type = readInteger(con)
+        }
+
+        ats = NULL
+        if(type %in% c(ATTRLANGSXP, ATTRLISTSXP))
+             #attributes
+            ats = ReadItem(con, FALSE, hdr = hdr, depth = depth + 1L)
+
+        tag = ReadItem(con, TRUE, hdr = hdr, depth = depth + 1L)
+
+        readBCLang(readInteger(con), skipValue, con, hdr, depth = depth + 1L)
+        readBCLang(readInteger(con), skipValue, con, hdr, depth = depth + 1L)        
+        
+    } else
+        ReadItem(con, FALSE, hdr = hdr, depth = depth + 1L)
+}
+
+
+#############
 
 readAltRepSXP =
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     cat("AltRepSXP\n")
-    browser()
+#    browser()
     info = ReadItem(con, skipValue = FALSE, hdr = hdr, depth = depth + 1L)  # put skipValue back in?
     state = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L)
     attr = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L)
@@ -719,7 +806,7 @@ function(con)
     format = readBin(con, 'raw', 2L) 
     format = trimws(rawToChar(format))
     if(format != "X")
-        stop("not XDR format")
+        stop(mkError(paste0(format,  ", not XDR format"), c("NonXDRFormat", "WrongFormat")))
 
     info = list(format = format)
     
@@ -737,6 +824,14 @@ function(con)
     }
     
     info
+}
+
+mkError =
+function(message, class = character(), call = NULL)    
+{
+    e = simpleError(message, call)
+    class(e) = c(class, class(e))
+    e
 }
 
 decodeVersion =
