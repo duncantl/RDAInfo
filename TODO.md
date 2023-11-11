@@ -11,10 +11,7 @@ tmp = structure(lapply(rdas, function(x) try(toc(x))), names = rdas)
 err = sapply(tmp, inherits, 'try-error')
 table(err)
 ```
-   + Currently errors for 1 of 32
-```
-[5] "../inst/sampleRDA/trimws_function.rda"  # BCODESXP not implemented.
-```
+   + Currently errors for 0 of 32
 
 1. 18 SEXP types remaining
   +  BCODESXP =     21    
@@ -41,7 +38,7 @@ table(err)
 1. Change in R-devel for OBJSXP and not S4SXP
 
 1. BCODESXP
-   + "inst/sampleRDA/trimws_function.rda"
+   + √ "inst/sampleRDA/trimws_function.rda"
    + "~/OGS/SUForm/ProcessForm/June8.rda"
    
 1. ALTREP_SXP
@@ -124,12 +121,29 @@ sapply(unclass(info), function(x) x$offset) # works
 
 + Look at the .RData files
    + ~/OGS/PRCC/GTTP/.RData - seg faults.
-   + ¿ A large vector whose length we get as a shorter integer and so is wrong.
-   + Seg faulting in R_eatCharVectorElements
-   + X Is this a different RDA format? NO
-   + The file is 38734 bytes
-   + The totalChars at the segfault is 113744 and so is nchars
-   + The .RData conains 11 functions which capture the R_GlobalEnv.
+   + now name for the "cookie" element is "" - so no tag.  So somehow skipped this.
+   + after processing the getPRM element, the info object has hastag == 0so no tag
+   + we have an extra element (25), and  an attribute is list() at depth 7
+      which seems wrong.
+   + element o comes before getPRM.	  Is that where things are going wrong.
+     + X o also has hasattrs == 0 but has attributes. The info is for the next pairlist which don't have attributes
+   + for getPRM element, info has hasattr = 0, but it does have a srcref attribute. So this looks wrong.	 
+   + √ Now get an error with a reference for the external pointer.
+      + in readREFSXP, if not in the hdr$references, return NULL.
+      + docs element is a list of HTLInternalDocument objects, so externalptr
+```
+11: readRDA.R#39: readExternalPointer(con, elInfo, skipValue, hdr, de
+12: readRDA.R#688: ReadItem(con, skipValue, hdr, depth + 1)
+13: readRDA.R#39: readREFSXP(con, ty, hdr)
+14: readRDA.R#751: get(as.character(ref - 1), hdr$references)
+```
+   + √ Fixed this. Need to read size of buffer in chunks when the string is too large.
+      + ¿ A large vector whose length we get as a shorter integer and so is wrong.
+      + Seg faulting in R_eatCharVectorElements
+      + X Is this a different RDA format? NO
+      + The file is 38734 bytes
+      + The totalChars at the segfault is 113744 and so is nchars
+      + The .RData contains 11 functions which capture the R_GlobalEnv.
 
 
 ## Extra Information
