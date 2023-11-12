@@ -29,7 +29,7 @@ ReadItem =
     # hdr is the header from readHeader() to provide context for all of the operations,
     # specfically the native_encoding. And now the references container.
 function(con, skipValue = FALSE, hdr = NULL, depth = 0L,
-         ty = readInteger(con), elInfo = unpackFlags(ty))    
+         ty = readInteger(con), elInfo = unpackFlags(ty, depth))    
 {
 # cat("ReadItem:");print(unname(elInfo))
     
@@ -215,7 +215,6 @@ readPairList =
     #
     # info is the result of readType() that identifies the LISTSXP for the pair list.
     # 
-    #
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     ans = list()
@@ -223,11 +222,12 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     ty = info
 
     ats = NULL  # attributes on the pair list itself.
-    tags = character()
     ndepth = depth + 1L
 
     if(info['hasattr']) 
         ats = readAttributes(con, skipValue = FALSE, hdr = hdr, depth = ndepth)
+
+    info1 = info
     
     ctr = 1L
     while(TRUE) {
@@ -235,14 +235,12 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
         tag = character()
         if(info['hastag'])  {
             tag = as.character(readTag(con, hdr = hdr, depth = ndepth))
-            if(tag == "tt")
-                browser()
+            if(FALSE && depth == 0) {
+                print(tag)
+                print(info)
+            }
         }
         
-
-        
-#if(depth == 0) browser()
-
         positions[ctr] = pos = seek(con)
 ###       if(ty["hastag"]) { 
 ###           name = readTag(con, hdr = hdr, depth = depth + 1L)
@@ -272,22 +270,19 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     if(!is.null(ats))
         attributes(ans) = at
 
-
     if(depth == 0 && skipValue) {
         ans = mapply(function(d, p) { d$offset = p; d}, ans, positions, SIMPLIFY = FALSE)
         class(ans) = "RDAToc"
     }
+
     
-    if(info["hasattr"] > 0) {
+    if(info1["hasattr"] > 0) {
         at = readAttributes(con, skipValue, hdr, depth = depth + 1L)
-        if(skipValue)
-            browser()
-        else
+        if(skipValue) {
+          #  browser()
+        } else
             attributes(ans) = at
     }
-
-#XX check if we need to do something with names or did we get them one element at a time.
-#    names(ans)[1] = tags    
     
     ans
 }
@@ -297,7 +292,8 @@ readAttributes =
 function(con, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     ty = readInteger(con)  # should be a LISTSXP
-    at = readPairList(con, unpackFlags(ty), hdr = hdr, depth = depth)
+#XXX  what if ty is not a LISTSXP/pairlist. Could it be a reference. 
+    at = readPairList(con, unpackFlags(ty, depth), hdr = hdr, depth = depth + 1L)
 }
 
 
@@ -685,18 +681,23 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 readExternalPointer =
 function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
+#    browser()
+
+    # serialize.c calls AddReadRef() after allocating the externalptr.
+    
     prot = ReadItem(con, skipValue, hdr, depth + 1L)
     tag = ReadItem(con, skipValue, hdr, depth + 1L)    
 
     # attributes. Should be on the externalptr.    
     ats = NULL
     if(info["hasattr"])
-        ats = ReadItem(con, TRUE, hdr = hdr, depth = depth + 1L)
+        # Read the attribute values, don't skip the values.
+        ats = ReadItem(con, FALSE, hdr = hdr, depth = depth + 1L)
     if(skipValue) {
         ans = defaultDesc("EXTPTRSXP")
         if(length(ats)) {
             ans$attrNames = list(names(ats))
-            ans$attrLengths = list(sapply(ats, function(x) x$length))
+            ans$attrLengths = list(sapply(ats, length)) # function(x) x$length))
         }
     } else {
         ans = new("externalptr")
@@ -715,8 +716,10 @@ readType =
     # Read the type of the next object and decompose the number into
     # different the flags describing the object.
     #
-function(con)    
-    unpackFlags(readInteger(con))
+    # Only called in one place in the code.
+    #
+function(con, depth)    
+    unpackFlags(readInteger(con), depth)
 
 readTag =
     #
@@ -726,7 +729,7 @@ function(con, hdr, info = NULL, depth = 0L)
 {
     if(is.null(info)) {
         flags = readInteger(con)
-        info = unpackFlags(flags)
+        info = unpackFlags(flags, depth)
     }
 
     if(info['type'] == REFSXP) 
@@ -749,7 +752,11 @@ function(con, flags, hdr)
     if(ref == 0)
         ref = readInteger(ref)
 
-    return(get(as.character(ref - 1L), hdr$references))
+    id = as.character(ref - 1L)
+    if(exists(id, hdr$references))
+        get(id, hdr$references)
+    else
+        NULL
 }
 
 addRef = 
@@ -782,13 +789,17 @@ unpackFlags =
     #  we don't convert the isobj, hasattr, hastag to LOGICALs
     #  This is so that we can combine all the fields/flags in a single vector.
     #  So these values may be > 1.  All we care is if 0 or not 0.
-function(val)    
-    c(type = bitAnd(val, 255L),
-      levels = bitShiftR(val,  12L),
-      isobj = bitAnd(val, IS_OBJECT_BIT_MASK),
-      hasattr = bitAnd(val, HAS_ATTR_BIT_MASK),
-      hastag = bitAnd(val, HAS_TAG_BIT_MASK))
-
+function(val, depth = -1)    
+{
+   ans = c(type = bitAnd(val, 255L),
+           levels = bitShiftR(val,  12L),
+           isobj = bitAnd(val, IS_OBJECT_BIT_MASK),
+           hasattr = bitAnd(val, HAS_ATTR_BIT_MASK),
+           hastag = bitAnd(val, HAS_TAG_BIT_MASK),
+           depth = depth)
+# print(unname(ans))
+   ans
+}
 
 rdaHeader = readHeader =
     #
