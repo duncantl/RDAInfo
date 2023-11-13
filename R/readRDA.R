@@ -214,6 +214,19 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     ans
 }
 
+Cat =
+function(depth, ...)
+    cat(ind(depth), ...)
+
+ind = 
+function(n)
+{
+    #    if(!is.numeric(n) || n < 0) stop("problem")
+    # browser()
+    paste(rep(" ", n), collapse = "")
+}
+
+
 readPairList =
     #
     # info is the c(type = 2, hasattr = , hastag = , ...)
@@ -873,4 +886,35 @@ function(val, asString = FALSE)
         paste(ver, collapse = ".")
     else
         ver
+}
+
+
+
+#XX can remove after we finish deugging.
+rmAttrs = 
+function(x)
+{
+	attributes(x) = NULL
+	x
+}
+
+
+
+
+setTraces =
+function()
+{
+    trace(ReadItem, quote(Cat(depth, "<ReadItem>", sexpType, "\n")), at = 3,
+          exit = quote(Cat(depth, "</ReadItem>\n")), print = FALSE)
+    trace(readAttributes, quote(Cat(depth, "<readAttributes>", sexpType(unpackFlags(ty, depth)["type"]), "\n")), at = 3,
+          exit = quote(Cat(depth, "</readAttributes>\n")), print = FALSE)
+    trace(readTag, quote(Cat(depth, "<readTag>", sexpType(info["type"]), " ")),
+          exit = quote(Cat(0, returnValue(), "</readTag>\n")), print = FALSE)
+    trace(readPairList, quote(Cat(depth, "<readPairList>\n")), exit = quote(Cat(depth, "</readPairList>", length(ans), "\n")), print = FALSE)
+    trace(readFunction, quote(Cat(depth, "<readFunction>\n")), exit = quote(Cat(depth, "</readFunction>\n")), print = FALSE)
+    trace(readList, quote(Cat(depth, "<readList>\n")), exit = quote(Cat(depth, "</readList>\n")), print = FALSE)
+    trace(readEnvironment, quote(Cat(depth, "<readEnvironment>\n")), exit = quote(Cat(depth, "</readEnvironment>\n")), print = FALSE)
+    trace(readLangSEXP, quote(Cat(depth, "<readLangSEXP>\n")), exit = quote(Cat(depth, "</readLangSEXP>\n")), print = FALSE)
+    trace(readREFSXP, quote(Cat(depth, "<readREFSXP>\n")), exit = quote(Cat(depth, "</readREFSXP>\n")), print = FALSE)
+    trace(readSYMSXP, quote(Cat(depth, "<readSYMSXP>\n")), exit = quote(Cat(depth, "</readSYMSXP>\n")), print = FALSE)
 }
