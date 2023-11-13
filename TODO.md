@@ -12,6 +12,8 @@ err = sapply(tmp, inherits, 'try-error')
 table(err)
 ```
    + Currently errors for 0 of 32
+   
+   + function_with_attrs.rda - lload() messes up the function - no body.
 
 1. 18 SEXP types remaining
   +  BCODESXP =     21    
@@ -121,12 +123,12 @@ sapply(unclass(info), function(x) x$offset) # works
 
 + Look at the .RData files
    + ~/OGS/PRCC/GTTP/.RData - seg faults.
-   + now name for the "cookie" element is "" - so no tag.  So somehow skipped this.
-   + after processing the getPRM element, the info object has hastag == 0so no tag
+   + now name for the "cookie" element is "" - ty after reading getPRM function has hastag == 0. It
+     is type 2 for the next element of the pairlist. So somehow messed up the tag.s.
    + we have an extra element (25), and  an attribute is list() at depth 7
       which seems wrong.
    + element o comes before getPRM.	  Is that where things are going wrong.
-     + X o also has hasattrs == 0 but has attributes. The info is for the next pairlist which don't have attributes
+     + XX o also has hasattrs == 0 but has attributes. The info is for the next pairlist which don't have attributes
    + for getPRM element, info has hasattr = 0, but it does have a srcref attribute. So this looks wrong.	 
    + √ Now get an error with a reference for the external pointer.
       + in readREFSXP, if not in the hdr$references, return NULL.
