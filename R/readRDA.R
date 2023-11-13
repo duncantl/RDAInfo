@@ -1,7 +1,14 @@
+#!!! Restore check  @745 check for type != 9 in readTag()
 #library(bitops)
 
 toc =
 function(file)
+{
+    lload(file, TRUE)
+}
+
+lload =
+function(file, skipValue = FALSE)    
 {
     #Most of this is so similar to load
     if(is.character(file)) {
@@ -16,7 +23,7 @@ function(file)
 
     header$references = new.env(parent = emptyenv())
 
-    ans = ReadItem(con, TRUE, hdr = header, depth = 0L)
+    ans = ReadItem(con, skipValue, hdr = header, depth = 0L)
     attr(header$references, "locked") = TRUE
     
     attr(ans, "file") = file
@@ -63,7 +70,7 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L,
            SYMSXP = readSYMSXP(con, elInfo, hdr, depth = depth),
            SPECIALSXP=,
            BUILTINSXP = readSpecial(con, elInfo, skipValue, hdr, depth),
-           REFSXP = readREFSXP(con, ty, hdr),
+           REFSXP = readREFSXP(con, ty, hdr, depth),
            BCODESXP = readBCODESXP(con, elInfo, skipValue, hdr, depth),
            S4SXP = readS4(con, elInfo, skipValue,hdr, depth),
            ALTREP_SXP = readAltRepSXP(con, elInfo, skipValue, hdr, depth),
@@ -249,20 +256,22 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 ###       } else
         name = length(ans) + 1L
 
-        value = ReadItem(con, skipValue, hdr, depth = depth + 1L) # have the type for the next element if length(ans) > 0. elInfo = ty)
+        # have the type for the next element if length(ans) > 0. elInfo = ty)
+        value = ReadItem(con, skipValue, hdr, depth = depth + 1L) 
         ans[[name]] = value
         if(length(tag) > 0)
             names(ans)[name] = tag
 
-        ty = readType(con)
-#  cat("readPairList: "); print(unname(ty))
- #if(ty["type"] == 13L) browser()
+        ty = readType(con, depth)
+#cat("readPairList: "); print(unname(ty))
+#if(ty["type"] == 13L) browser()
 
         if(ty["type"] == NILVALUE_SXP || ty["type"] == NILSXP)
             break
         #XXX remove this.
         if(is.null(value))
             break
+        
         info = ty
         ctr = ctr + 1L
     }
@@ -746,7 +755,7 @@ if(unpackFlags(flags)["type"] != 9) recover()
 }
 
 readREFSXP =
-function(con, flags, hdr)    
+function(con, flags, hdr, depth = 0L)    
 {
     ref = bitShiftR(flags, 8)
     if(ref == 0)
@@ -797,7 +806,7 @@ function(val, depth = -1)
            hasattr = bitAnd(val, HAS_ATTR_BIT_MASK),
            hastag = bitAnd(val, HAS_TAG_BIT_MASK),
            depth = depth)
-# print(unname(ans))
+#print(unname(ans)) #XXX
    ans
 }
 
