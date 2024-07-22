@@ -1,5 +1,5 @@
 Package: RDAInfo
-Version: 0-1.0
+Version: 0-2.0
 Title: Read summary of RDA  files and restore individual elements
 Description: This reads RDA (version 3, XDR format) files 
   to get the names, types, lengths and positions/(offsets in the stream) of the
@@ -17,7 +17,7 @@ Maintainer: <duncan@r-project.org>
 License: BSD
 Imports: bitops
 Note: There are a few SEXP types that are not yet handled. Also, this does not read some RDA files
-  eventhough they were written using the version 3, XDR format.
+  even though they were written using the version 3, XDR format.
   Since it is R code, I encourage R programmers to explore adding this capability.
   See https://github.com/duncantl/LLDB_Scripting for an instrumentation utility I found useful
    for knowing the structure of a given Rda file.
