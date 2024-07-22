@@ -49,18 +49,20 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L,
            INTSXP =,
            REALSXP =, 
            CPLXSXP =,
+           RAWSXP =,
            STRSXP = readVector(con, elInfo, skipValue, hdr, depth),
+           # Do we ever see the CHARSXP since we process them when reading the STRSXP ?
            CHARSXP = readCharsxp(con, skipValue, hdr, depth = depth),
            EXPRSXP = ,
            VECSXP = readList(con, elInfo, skipValue, hdr, depth),
-           NILSXP = ,
+           NILSXP = ,   # Won't see this as SaveSpecialHook maps to R_NilValue to NILVALUE_SXP.
            NILVALUE_SXP = NULL,
            ENVSXP = readEnvironment(con, elInfo, skipValue, hdr, depth = depth),
            GLOBALENV_SXP = if(skipValue) defaultDesc(sexpType) else globalenv(),  # may need to add this and emptyenv to reference table.
            EMPTYENV_SXP = emptyenv(),
            EXTPTRSXP = readExternalPointer(con, elInfo, skipValue, hdr, depth),
            BASEENV_SXP = ,
-           BASENAMESPACE_SXP = getNamespace("base"),           
+           BASENAMESPACE_SXP = getNamespace("base"),           # Or .BaseNamespaceEnv
            CLOSXP = readFunction(con, elInfo, skipValue, hdr, depth = depth),
            # both MISSINGARG_SXP and UNBOUNDVALUE_SXP correspond to
            # C level SYMSXPs that are not necessarily/obviously available to use at the R level.?????
@@ -72,6 +74,7 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L,
            BUILTINSXP = readSpecial(con, elInfo, skipValue, hdr, depth),
            REFSXP = readREFSXP(con, ty, hdr, depth),
            BCODESXP = readBCODESXP(con, elInfo, skipValue, hdr, depth),
+           OBJSXP =,
            S4SXP = readS4(con, elInfo, skipValue,hdr, depth),
            ALTREP_SXP = readAltRepSXP(con, elInfo, skipValue, hdr, depth),
            # NAMESPACE_SXP
@@ -83,7 +86,7 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L,
 readSYMSXP =
 function(con, elInfo, hdr, depth = 0L)    
 {
-    as.name(readTag(con, hdr, elInfo, depth = depth + 1L))
+  as.name(readTag(con, hdr, elInfo, depth = depth + 1L))
 }
 
 #########
@@ -251,13 +254,25 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     
     ctr = 1L
     while(TRUE) {
-
+        if(depth == 0 && ctr >= 23) {
+            # √ debug(ReadItem); debug(readTag); debug(readAttributes); debug(readPairList);  debug(readFunction);
+            # √ debug(readLangSEXP); debug(readList); debug(readEnvironment);
+            # debug(readREFSXP) 
+            # debug(readSYMSXP)
+            # debug(addRef)
+          if(FALSE) {
+            browser()
+          }
+       # debug(readFunction)      
+           # debug(readVector); debug(readCharacterVector); debug(readVectorValues);
+        }
+        
         tag = character()
         if(info['hastag'])  {
             tag = as.character(readTag(con, hdr = hdr, depth = ndepth))
             if(FALSE && depth == 0) {
                 print(tag)
-                print(info)
+               # print(info)
             }
         }
         
@@ -293,7 +308,9 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
         attributes(ans) = at
 
     if(depth == 0 && skipValue) {
-        ans = mapply(function(d, p) { d$offset = p; d}, ans, positions, SIMPLIFY = FALSE)
+        ans = mapply(setOffset, ans, positions,
+                     SIMPLIFY = FALSE)
+        attr(ans, "offsets") = positions
         class(ans) = "RDAToc"
     }
 
@@ -310,11 +327,23 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 }
 
 
+setOffset =
+function(x, offset)    
+{
+    w = is.name(x) || identical(x, emptyenv()) || identical(x, .BaseNamespaceEnv)
+    if(w)
+        wrap(x, typeof(x), offset = offset)
+    else
+        x
+}
+
+
 readAttributes =
 function(con, skipValue = FALSE, hdr = NULL, depth = 0L)    
 {
     ty = readInteger(con)  # should be a LISTSXP
 #XXX  what if ty is not a LISTSXP/pairlist. Could it be a reference. 
+#    if(sexpType(unpackFlags(ty, depth)["type"]) != "LISTSXP") stop("problems")
     at = readPairList(con, unpackFlags(ty, depth), hdr = hdr, depth = depth + 1L)
 }
 
@@ -384,7 +413,7 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
         body(ans) = body
         environment(ans) = env
         #XXX add back when we have references working correctly. Eventhough the function isn't work, the print is all wrong with the attributes (srcref) set with no reference table.
-        #attributes(ans) = at
+        attributes(ans) = at
     }
     
     ans
@@ -562,7 +591,6 @@ function(con, len, skipValue = FALSE, hdr = NULL, depth = 0L, hasAttr = FALSE)
             ans = addDescAttrs(ans, at)
         } else 
             attributes(ans) = at
-
     }
 
     ans
@@ -755,12 +783,13 @@ function(con, hdr, info = NULL, depth = 0L)
     }
 
     if(info['type'] == REFSXP) 
-        return(readREFSXP(con, flags, hdr))
+        return(readREFSXP(con, flags, hdr, depth = depth + 1L))
     
     flags = readInteger(con)
 
 #Sanity check.  Leave for now.  Make assert() that we can disable as a no-op.
-if(unpackFlags(flags)["type"] != 9) recover()    
+#XXX uncomment
+    #if(unpackFlags(flags, depth)["type"] != 9) recover()    
 
     val = as.name(readCharsxp(con, depth = depth + 1L))
     addRef(val, hdr$references)
@@ -871,7 +900,7 @@ decodeVersion =
     #
     # See DecodeVersion in serialize.c (#2160)
     #
-    # SO for % as bit operation.
+    # StackOverflow for % as bit operation.
     #  https://stackoverflow.com/questions/3072665/bitwise-and-in-place-of-modulus-operator
     #
 function(val, asString = FALSE)    
@@ -894,8 +923,8 @@ function(val, asString = FALSE)
 rmAttrs = 
 function(x)
 {
-	attributes(x) = NULL
-	x
+    attributes(x) = NULL
+    x
 }
 
 
