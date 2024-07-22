@@ -22,14 +22,21 @@ SEXPMap = c(
  EXTPTRSXP =    22    ,
  WEAKREFSXP =   23    ,
  RAWSXP =       24    ,
+ OBJSXP =       25,   # Same as S4SXP
  S4SXP =        25    ,
  NEWSXP =       30    ,
  FREESXP =      31    ,
  FUNSXP =       99    ,
+ 
  ###
  ### From serialize.c
  ### 
  REFSXP =             255,
+
+
+ # NILVALUE, EMPTYENV, BASEENV, GLOBALENV, UNBOUNDVALUE, MISSINGARG, BASENAMESPACE
+ # used in SaveSpeciakHook.
+ 
  NILVALUE_SXP =       254,
  GLOBALENV_SXP =      253,
  UNBOUNDVALUE_SXP =   252,
@@ -44,8 +51,12 @@ SEXPMap = c(
  BCREPREF  =       243,
  EMPTYENV_SXP = 	  242,
  BASEENV_SXP =  241,
+
+ # for attributes on expressions in the byte code constant pool 
  ATTRLANGSXP  =  240,
  ATTRLISTSXP =  239,
+
+ 
  ALTREP_SXP =  238
  
 )
