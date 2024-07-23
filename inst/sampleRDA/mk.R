@@ -25,3 +25,18 @@ save(baseEnvNS, file = "inst/sampleRDA/baseNamespace.rda")
 
 save(.BaseNamespaceEnv, file = "inst/sampleRDA/baseNamespaceEnv.rda")
 
+
+
+# .Internal is a SPECIALSXP
+save(.Internal, file = "inst/sampleRDA/dotInternal.rda")
+
+
+# a DOTSXP
+f = function(x, file = "inst/sampleRDA/dots.rda", ...) { dots = get("...");  save(dots, file = file); if(FALSE) plot(x, x^2, ...); TRUE}
+f(1:10, xlab = "X", ylab = "Y")
+
+# And empty ... raises an error for get("...")
+#f(1:10, file = "inst/sampleRDA/dotsEmpty.rda")
+
+
+f(1:10, "inst/sampleRDA/promise.rda", xlab = "X", ylab = cat("Saying hi\n"))
