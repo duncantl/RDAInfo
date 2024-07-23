@@ -13,7 +13,14 @@
 Error in names(ans)[name] = tag : 
   'names' attribute [1] must be the same length as the vector [0]
 ```
-
+   + Need to decide what to do when 
+      + top-level object is NULL
+	  + element of a pair-list is a NULL at any depth/level
+   + Problem is that we are populating a list() and the first value is 
+   NULL. When we insert that with `ans[[1]] = NULL`, we end up with an empty list.
+   Then we set the name and there is no element.
+   We can use `list(NULL)` for the first element.
+   
 1. [check result] Error `toc("inst/sampleRDA/emptyenv.rda")`
 
 1. [check result] Error `toc("inst/sampleRDA/symbol.rda")`
