@@ -152,7 +152,7 @@ function(type, length = NA, class = NA, names = NA, ...)
 }
 
 
-addDescAttrs = addDescAttr =
+addDescAttrs = 
 function(desc, at, all = TRUE)
 {
     ats = names(at)
@@ -736,7 +736,7 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     attr = ReadItem(con, skipValue = skipValue, hdr = hdr, depth = depth + 1L)
     if(skipValue) {
         ans = defaultDesc("ALTREP_SXP")
-        addDescAttr(ans, attr)
+        addDescAttrs(ans, attr)
     } else {
         warning("not restoring ALTREP_SXP for now. returning NULL.")
         ans = NULL
