@@ -1,8 +1,24 @@
+
+
 1. TEST SUITE - create
    + We have example rda files 
    + we can use toc() and lload() for each and then compare the results.
       + when getting the element from the toc(), make certain to unclass to avoid [[.RDAToc
 	  + but can also compare the results by getting the object.
+
+1. toc(  "inst/sampleRDA/utilsNamespace.rda")
+
+1. Error for toc( "inst/sampleRDA/NULL.rda")
+```
+Error in names(ans)[name] = tag : 
+  'names' attribute [1] must be the same length as the vector [0]
+```
+
+1. [check result] Error `toc("inst/sampleRDA/emptyenv.rda")`
+
+1. [check result] Error `toc("inst/sampleRDA/symbol.rda")`
+   + Can't put attributes on a symbol. Need a singleton object.
+   + See wrapObject() and setOffset()
 
 1. Check examples
 ```
@@ -10,12 +26,16 @@ rdas = list.files("../inst/sampleRDA", pattern = "\\.rda", full = TRUE)
 tmp = structure(lapply(rdas, function(x) try(toc(x))), names = rdas)
 err = sapply(tmp, inherits, 'try-error')
 table(err)
+
+tt = table(unlist(lapply(tmp[!err], function(x) as.data.frame(x)$type)))
+setdiff(names(RDAInfo:::SEXPMap), names(tt))
 ```
-   + Currently errors for 0 of 32
+   + Currently errors for 3 of 43
    
    + function_with_attrs.rda - lload() messes up the function - no body.
 
 1. 18 SEXP types remaining
+  + Actually 3 if compare
   +  BCODESXP =     21    
   + √ S4SXP =        25    
   + check SPECIALSXP =    7	  
@@ -24,6 +44,35 @@ table(err)
   + PROMSXP = 	     5	  
   + DOTSXP = 	    17	  
   + WEAKREFSXP =   23    
+
+  + NILSXP
+  + SYMSXP
+  + LISTSXP
+  + PROMSXP
+  + SPECIALSXP
+  + CHARSXP
+  + DOTSXP
+  + BCODESXP
+  + WEAKREFSXP
+  + RAWSXP
+  + REFSXP
+  + NILVALUE_SXP
+  + UNBOUNDVALUE_SXP
+  + MISSINGARG_SXP
+  + BASENAMESPACE_SXP
+  + NAMESPACESXP
+  + PACKAGESXP
+  + PERSISTSXP
+  + CLASSREFSXP
+  + GENERICREFSXP
+  + BCREPDEF
+  + BCREPREF
+  + EMPTYENV_SXP
+  + BASEENV_SXP
+  + ATTRLANGSXP
+  + ATTRLISTSXP
+  + ALTREP_SXP
+
 
   + Not mentioned in serialize.c
      + X ANYSXP = 	    18	    shouldn't see these
@@ -35,13 +84,16 @@ table(err)
   + √ VECSXP = 	    19	  
   + √ LANGSXP = 	     6	  
   + √ ENVSXP = 	     4	  
-  + √ SYMSXP
+  + √ SYMSXP                         <<<<<<<<<<<<< not in test cases
 
-1. Change in R-devel for OBJSXP and not S4SXP
+1. See traceSEXP.R for determining which SEXP types were processed.
+
+1. √ Change in R-devel for OBJSXP and not S4SXP
 
 1. BCODESXP
    + √ "inst/sampleRDA/trimws_function.rda"
    + "~/OGS/SUForm/ProcessForm/June8.rda"
+      +   arguments imply differing number of rows: 1, 0
    
 1. ALTREP_SXP
    + "~/OGS/COVID/WinterInstruction/AllCourses/AllCourses.rda"
@@ -122,7 +174,9 @@ sapply(unclass(info), function(x) x$offset) # works
 ## Problem Files
 
 + Look at the .RData files
-   + ~/OGS/PRCC/GTTP/.RData - seg faults.
+   + ~/OGS/PRCC/GTTP/.RData - seg faults. Not now. Gives an error `d$offset = p : object of type
+     'symbol' is not subsettable` which we see when reading a simple symbol.
+	 + Now works 
    + now name for the "cookie" element is "" - ty after reading getPRM function has hastag == 0. It
      is type 2 for the next element of the pairlist. So somehow messed up the tag.s.
    + we have an extra element (25), and  an attribute is list() at depth 7
@@ -225,6 +279,9 @@ o = toc("inst/sampleRDA/list.rda")
    + see depthArg.R
 
 ## Done (?)
+
+1. √ Do we handle NAs in character vectors. 
+    + Written as -1  and no value, so the length is -1 and we don't read
 
 1. √ name for object in simpleFunction.rda  Seems to be 1,  not simpleFun.  
       + This is how it is printing when there is only one object.  Fix when combine all the columns.
