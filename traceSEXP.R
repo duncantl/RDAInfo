@@ -24,6 +24,12 @@ tmp = structure(lapply(rdas, function(x) try(toc(x))), names = rdas)
 names(tmp) = gsub("\\.rda", "", basename(rdas))
 err = sapply(tmp, inherits, 'try-error')
 
+dfs = lapply(tmp, function(x) try(as.data.frame(x)))
+err2 = sapply(dfs, inherits, 'try-error')
+
+    
+
+
 k = ctr$counts()
 cat("\n\nHave NOT processed\n")
 print(names(k)[k == 0])
