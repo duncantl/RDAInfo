@@ -272,17 +272,15 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
     
     ctr = 1L
     while(TRUE) {
-        if(depth == 0 && ctr >= 23) {
+        if(FALSE && depth == 0 && ctr >= 23) {
             # √ debug(ReadItem); debug(readTag); debug(readAttributes); debug(readPairList);  debug(readFunction);
             # √ debug(readLangSEXP); debug(readList); debug(readEnvironment);
             # debug(readREFSXP) 
             # debug(readSYMSXP)
             # debug(addRef)
-          if(FALSE) {
             browser()
-          }
-       # debug(readFunction)      
-           # debug(readVector); debug(readCharacterVector); debug(readVectorValues);
+            # debug(readFunction)      
+            # debug(readVector); debug(readCharacterVector); debug(readVectorValues);
         }
         
         tag = character()
@@ -303,8 +301,12 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
         name = length(ans) + 1L
 
         # have the type for the next element if length(ans) > 0. elInfo = ty)
-        value = ReadItem(con, skipValue, hdr, depth = depth + 1L) 
-        ans[[name]] = value
+        value = ReadItem(con, skipValue, hdr, depth = depth + 1L)
+        if(is.null(value) && name == 1L)
+            ans = list(NULL)
+        else
+            ans[[name]] = value
+        
         if(length(tag) > 0)
             names(ans)[name] = tag
 
