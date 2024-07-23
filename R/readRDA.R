@@ -56,7 +56,7 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L,
            EXPRSXP = ,
            VECSXP = readList(con, elInfo, skipValue, hdr, depth),
            NILSXP = ,   # Won't see this as SaveSpecialHook maps to R_NilValue to NILVALUE_SXP.
-           NILVALUE_SXP = NULL,
+           NILVALUE_SXP = if(skipValue) defaultDesc(sexpType) else NULL,
            ENVSXP = readEnvironment(con, elInfo, skipValue, hdr, depth = depth),
            GLOBALENV_SXP = if(skipValue) defaultDesc(sexpType) else globalenv(),  # may need to add this and emptyenv to reference table.
            EMPTYENV_SXP = emptyenv(),
@@ -152,7 +152,7 @@ function(type, length = NA, class = NA, names = NA, ...)
 }
 
 
-addDescAttrs =
+addDescAttrs = addDescAttr =
 function(desc, at, all = TRUE)
 {
     ats = names(at)
@@ -302,10 +302,9 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 
         # have the type for the next element if length(ans) > 0. elInfo = ty)
         value = ReadItem(con, skipValue, hdr, depth = depth + 1L)
-        if(is.null(value) && name == 1L)
-            ans = list(NULL)
-        else
-            ans[[name]] = value
+        # Insert element even it if is NULL.
+        ans[name] = list(value) # NULL)
+# Was  ans[[name]] = value but doesn't handle NULL, of course.
         
         if(length(tag) > 0)
             names(ans)[name] = tag
