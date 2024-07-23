@@ -67,20 +67,38 @@ function(con, skipValue = FALSE, hdr = NULL, depth = 0L,
            # both MISSINGARG_SXP and UNBOUNDVALUE_SXP correspond to
            # C level SYMSXPs that are not necessarily/obviously available to use at the R level.?????
            MISSINGARG_SXP = structure(TRUE, class = "MISSINGARG_SXP"), #quote(foo(,))[[2]], # need to mimic R_MissingArg       # alist(x=)
-           # UNBOUNDVALUE_SXP  
+           UNBOUNDVALUE_SXP = structure(NA, class = "UnboundValue"),
+           DOTSXP =,
+           PROMSXP = ,
            LANGSXP = readLangSEXP(con, elInfo, skipValue, hdr, depth),
            SYMSXP = readSYMSXP(con, elInfo, hdr, depth = depth),
-           SPECIALSXP=,
+           SPECIALSXP =,
            BUILTINSXP = readSpecial(con, elInfo, skipValue, hdr, depth),
            REFSXP = readREFSXP(con, ty, hdr, depth),
            BCODESXP = readBCODESXP(con, elInfo, skipValue, hdr, depth),
            OBJSXP =,
            S4SXP = readS4(con, elInfo, skipValue,hdr, depth),
            ALTREP_SXP = readAltRepSXP(con, elInfo, skipValue, hdr, depth),
-           # NAMESPACE_SXP
+           NAMESPACESXP = readNamespace(con, hdr, depth),
            # PACKAGESXP
            stop("unhandled type in ReadItem ", sexpType)
           )
+}
+
+readDots =
+function(con, skipValue = FALSE, hdr = NULL, depth = 1)    
+{
+
+}
+
+readNamespace =
+function(con, hdr = NULL, depth = 1)    
+{
+    # read the 0
+    readInteger(con)
+    len = readInteger(con)
+    spec = readCharacterVector(con, len, skipValue = FALSE, hdr = hdr, depth = depth + 1L, hasAttr = FALSE)
+    getNamespace(spec[1])
 }
 
 readSYMSXP =
@@ -330,7 +348,7 @@ function(con, info, skipValue = FALSE, hdr = NULL, depth = 0L)
 setOffset =
 function(x, offset)    
 {
-    w = is.name(x) || identical(x, emptyenv()) || identical(x, .BaseNamespaceEnv)
+    w = is.name(x) || is.environment(x)  # identical(x, emptyenv()) || identical(x, .BaseNamespaceEnv) 
     if(w)
         wrap(x, typeof(x), offset = offset)
     else
