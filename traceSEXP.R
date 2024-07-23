@@ -35,13 +35,29 @@ cat("\n\nHave processed\n")
 print(names(k)[k > 0])
 
 
-# 
-intersect(names(m)[m < 100], names(k)[k == 0])
+#
+cat("Rinternal types not processed yet\n")
+print(intersect(names(m)[m < 100], names(k)[k == 0]))
+
+#
+# DOTSXP - this is an actual instance of arguments matched to ..., not the ... symbol, etc.
+# DOTSXP leads to PROMSXP and UNBOUNDVALUE_SXP objects appearing in the RDA.
+# See dots.rda and promise.rda
+
+# should we see
+
+# WEAKREFSXP   
+
+
+# FUNSXP - No (?). This is used as a mode rather than an actual type.
 
 # Shouldn't see
 # NILSXP
 # CHARSXP
 # PROMSXP
-# ANYSXP
+# ANYSXP - used as a mode.
+#
+# S4SXP which is now OBJSXP
+#
 
-# NEWSXP or FREESXP
+# NEWSXP or FREESXP - for allocation and GC.
