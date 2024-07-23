@@ -52,6 +52,9 @@ function(x, row.names = NULL, optional = FALSE, elNames = "union", ...)
     x = unclass(x)  # leave as we will probably add a [.RDAToc method and then that would call that.
 
     if(length(elNames) == 1 ) {
+        # These could be actual names of fields.
+        # Also, could be character vector of length 1 that isn't these identifying a single field.
+        # That's fine. It will be left as is.
         if(elNames == "union")
             elNames = unique(unlist(lapply(x, names)))
         else if(elNames == "intersect") {
@@ -71,6 +74,16 @@ getVars =
     # adding them if they don't exist, giving them values of NA.
 function(df, vars)
 {
+    if(is.null(df)) {
+        tmp = as.data.frame( structure(replicate(length(vars), NA, FALSE), names = vars))
+        if("class" %in% vars)
+            tmp[1, "class"] = "NULL"
+        if("length" %in% vars)        
+            tmp[1, "length"] = 0L
+        return(tmp)
+    }
+    
+    
     w = vars %in% names(df) 
     ans = df[, vars[w]]
     ans[ vars[!w] ] = NA
