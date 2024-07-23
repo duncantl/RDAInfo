@@ -3,13 +3,26 @@
 The purposes of this package are to be able to deal with large R data (rda) files
 created via a call to save() **without loading** the R objects but 
 
-+ providing a description of the top-level variables it contains without restoring the objects,
-+ allowing deserializing one or a subset of the variables without restoring the others
++ providing a description of the top-level variables it contains without restoring/instantiating the objects,
++ allowing deserializing of one or a subset of the variables without restoring the others,
++ know where (the offset in the file) each top-level variable starts in the file,
++ know what is in the file, including any code that might be evaluated.
+
+This can help finding a particular data.frame or variable generally in
+a collection of rda files when we know identifying characteristics, e.g.,
+a data.frame with columns named "x" and "y", or
+with a column named "d" with class "Date" or "POSIXct".
+
+Note: If the table of offsets was placed at the end of the RDA file, we would be able provide
+this "random"/direct access to variables without having to first construct the table of offsets.
+We explore this elsewhere.
+
 
 The following is an example of its use:
 ```r
 rda.file = system.file("sampleRDA/class_named_integer_logical_character_uncompress.rda", package = "RDAInfo")
 tc = toc(rda.file)
+tc
 ```
 ```
 file: path/to/class_named_integer_logical_character_uncompress.rda
@@ -20,19 +33,54 @@ i   INTSXP      4 Example     32
 l   LGLSXP      5    <NA>    195
 let STRSXP      7    <NA>    240
 ```
+The data.frame above shows the 
++ names of the variables,
++ the type of each variable
++ length
++ class and
++ offset/location.
+
+Only `i` has a class attribute.
+
 
 We can extract an individual variable with, e.g.,
 ```r
 tc[[ "let" ]]
-tc$let
 ```
 ```
 [1] "a" "b" "c" "d" "e" "f" "g"
 ```
 
-And similarly,  `tc[ c("l", "let") ]` or `tc[ c(2, 3) ]`
+And similarly, we can extract multiple elements, e.g.,
+```r
+tc[ c("l", "let") ]
+tc[ c(2, 3) ]
+```
 
 
+We (currently) use `$` to get the description of an object from the `RDAToc` object, e.g.,
+```r
+tc$i
+```
+```
+    type length   class names                name offset
+1 INTSXP      4 Example FALSE jane, bob, mary, xi     45
+```
+This also shows the names.
+
+
+For a function object, we have information about the 
++ number of parameters
++ the parameter names
++ whether it has a `...` parameter
++ whether each parameter has a default value
+
+
+
+When constructing the data.frame for a collection of variables in an RDA file,
+by default, we use the union of all fields in the descriptions of the objects.
+The as.data.frame method also supports using the intersection of the fields,
+i.e., only the fields common to all object descriptions in the RDA file.
 
 
 ##
@@ -146,7 +194,7 @@ While we wrote this only today and have now updated it a little, and we haven't 
 
 + Does not YET handle
    + S4 objects
-   + Byte code
+   + Byte code (BCODE)
 
 
 ##  Performance
@@ -212,7 +260,7 @@ object which is a list  with 785 elements.
 
 Loading the file takes 3.92 seconds. Reading the table of contents takes .054.
 
-This should have been an RDS file. The name did tell me what it contained - SmallSampleTrainDist.
+This should originally have been an RDS file. The name did tell me what it contained - SmallSampleTrainDist.
 
 (A good point is: if this is the largest file you have, just load it to see what it contains; you
 get more information.  Well, I used to have much larger files!)
