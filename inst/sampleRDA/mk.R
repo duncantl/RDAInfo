@@ -40,3 +40,9 @@ f(1:10, xlab = "X", ylab = "Y")
 
 
 f(1:10, "inst/sampleRDA/promise.rda", xlab = "X", ylab = cat("Saying hi\n"))
+
+
+
+a = 1:3
+n = NULL
+save(a, n, file = "inst/sampleRDA/twoObjsOneNull.rda")

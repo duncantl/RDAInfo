@@ -73,8 +73,7 @@ This writes the JSON version of the ReadItemInfo array to '/tmp/foo.json'. (You 
 of the file by specifying it as a second argument in the call.)
 
 Then in an R session (perhaps this one running under the debugger, or a separate one)
-
-```
+```{r}
 source("utils.R")
 readJS()
 ```
